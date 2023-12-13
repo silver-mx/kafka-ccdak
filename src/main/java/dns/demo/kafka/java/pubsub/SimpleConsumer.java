@@ -1,6 +1,6 @@
 package dns.demo.kafka.java.pubsub;
 
-import dns.demo.kafka.util.Utils;
+import dns.demo.kafka.util.ClusterUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -43,7 +43,7 @@ public class SimpleConsumer {
 
     public static Properties getConsumerProperties() {
         Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Utils.getClusterHostPort());
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, ClusterUtils.getClusterHostPort());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "simple-java-group");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 1000);

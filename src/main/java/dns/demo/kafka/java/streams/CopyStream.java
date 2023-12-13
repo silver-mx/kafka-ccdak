@@ -2,7 +2,7 @@ package dns.demo.kafka.java.streams;
 
 import dns.demo.kafka.java.pubsub.SimpleConsumer;
 import dns.demo.kafka.java.pubsub.SimpleProducer;
-import dns.demo.kafka.util.Utils;
+import dns.demo.kafka.util.ClusterUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -13,6 +13,8 @@ import org.apache.kafka.streams.Topology;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+
+import static dns.demo.kafka.java.streams.util.StreamUtils.getStreamProperties;
 
 @Slf4j
 public class CopyStream {
@@ -48,17 +50,6 @@ public class CopyStream {
 
             System.exit(0);
         }
-    }
-
-    private static Properties getStreamProperties() {
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-example-" + UUID.randomUUID());
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, Utils.getClusterHostPort());
-        props.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0);
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.StringSerde.class.getName());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.StringSerde.class.getName());
-
-        return props;
     }
 
     public static void main(String[] args) {
