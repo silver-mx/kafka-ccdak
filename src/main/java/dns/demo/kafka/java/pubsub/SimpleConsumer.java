@@ -1,4 +1,4 @@
-package dns.demo.kafka.java.simple;
+package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +12,11 @@ import java.util.List;
 import java.util.Properties;
 
 @Slf4j
-public class SimpleConsumerExample {
+public class SimpleConsumer {
+
+    public static int consume(String topic) {
+        return consume(getConsumerProperties(), topic);
+    }
 
     public static int consume(Properties props, String topic) {
         int recordCount = 0;
@@ -37,7 +41,7 @@ public class SimpleConsumerExample {
         return recordCount;
     }
 
-    private static Properties getConsumerProperties() {
+    public static Properties getConsumerProperties() {
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Utils.getClusterHostPort());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "simple-java-group");
@@ -51,7 +55,7 @@ public class SimpleConsumerExample {
     }
 
     public static void main(String[] args) {
-        int recordCount = SimpleConsumerExample.consume(getConsumerProperties(), "inventory");
+        int recordCount = SimpleConsumer.consume(getConsumerProperties(), "inventory");
         log.info("recordCount=" + recordCount);
     }
 }
