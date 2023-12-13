@@ -11,8 +11,8 @@ import java.util.stream.IntStream;
 
 public class SimpleProducer {
 
-    public static void produce(int numMessages, String topic) {
-        produce(numMessages, getProducerProperties(), topic);
+    public static void produce(int numRecords, String topic) {
+        produce(numRecords, getProducerProperties(), topic);
     }
 
     public static void produce(int numMessages, Properties props, String topic) {

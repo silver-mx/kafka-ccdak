@@ -24,7 +24,7 @@ public class SimpleConsumer {
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
             consumer.subscribe(List.of(topic));
             long startTime = System.currentTimeMillis();
-            while (Duration.ofMillis(System.currentTimeMillis() - startTime).getSeconds() < 30) {
+            while (Duration.ofMillis(System.currentTimeMillis() - startTime).getSeconds() < 10) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 records.forEach(record ->
                         log.info("offset = {}, key = {}, value = {}", record.offset(), record.key(), record.value())
@@ -47,7 +47,7 @@ public class SimpleConsumer {
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "simple-java-group");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 1000);
-        //props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"); //From the beginning
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"); //From the beginning
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
 
