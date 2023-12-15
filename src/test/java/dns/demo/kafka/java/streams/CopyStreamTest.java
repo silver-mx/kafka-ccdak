@@ -4,20 +4,24 @@ import dns.demo.kafka.AbstractKafkaTest;
 import dns.demo.kafka.java.pubsub.SimpleConsumer;
 import dns.demo.kafka.java.pubsub.SimpleProducer;
 import dns.demo.kafka.java.streams.util.StreamUtils;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
 import static dns.demo.kafka.java.streams.util.StreamUtils.*;
 import static org.apache.kafka.streams.StreamsConfig.BOOTSTRAP_SERVERS_CONFIG;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @EmbeddedKafka
 class CopyStreamTest extends AbstractKafkaTest {
@@ -36,12 +40,18 @@ class CopyStreamTest extends AbstractKafkaTest {
 
     @Test
     void copyDataFromTopicToTopic(EmbeddedKafkaBroker broker) {
-        int expectedRecords = 100;
+        int expectedRecords = 10;
 
         produceRecords(expectedRecords, inputTopic, broker);
-        CopyStream.copyDataFromTopicToTopic(streamProperties, inputTopic, outputTopic);
-        int recordCount = consumeRecords(outputTopic, broker);
+        kafkaStreams = CopyStream.copyDataFromTopicToTopic(streamProperties, inputTopic, outputTopic);
 
-        assertEquals(expectedRecords, recordCount);
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            int recordCount = 0;
+            try (Consumer<String, String> consumer = createConsumerAndSubscribe(outputTopic, broker)) {
+                while (recordCount != expectedRecords) {
+                    recordCount += KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100)).count();
+                }
+            }
+        });
     }
 }

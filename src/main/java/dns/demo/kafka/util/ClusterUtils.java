@@ -7,13 +7,13 @@ import java.util.Properties;
 
 public class ClusterUtils {
 
-    public static String getClusterHostPort() {
+    public static String getBroker() {
         return Optional.ofNullable(System.getenv("KAFKA_HOST_PORT")).orElse("dell:9092");
     }
 
     public static Properties getAdminClientProperties() {
         Properties props = new Properties();
-        props.put("bootstrap.servers", getClusterHostPort());
+        props.put("bootstrap.servers", getBroker());
         return props;
     }
 
