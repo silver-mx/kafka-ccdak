@@ -1,28 +1,46 @@
 package dns.demo.kafka.java.streams;
 
+import dns.demo.kafka.AbstractKafkaTest;
 import dns.demo.kafka.java.pubsub.SimpleConsumer;
 import dns.demo.kafka.java.pubsub.SimpleProducer;
-import dns.demo.kafka.util.ClusterUtils;
+import dns.demo.kafka.java.streams.util.StreamUtils;
+import org.apache.kafka.streams.StreamsConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.kafka.test.EmbeddedKafkaBroker;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
 
-import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
 
 import static dns.demo.kafka.java.streams.util.StreamUtils.*;
+import static org.apache.kafka.streams.StreamsConfig.BOOTSTRAP_SERVERS_CONFIG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class CopyStreamTest {
+@EmbeddedKafka
+class CopyStreamTest extends AbstractKafkaTest {
+
+    private final Properties streamProperties = StreamUtils.getStreamProperties();
+    private String inputTopic;
+    private String outputTopic;
+
     @BeforeEach
-    void setUp() {
-        ClusterUtils.getAdminClient().deleteTopics(List.of(INPUT_TOPIC_STREAM, OUTPUT_TOPIC_STREAM_1));
+    void setUp(EmbeddedKafkaBroker broker) {
+        inputTopic = INPUT_TOPIC_STREAM + "-" + UUID.randomUUID();
+        outputTopic = OUTPUT_TOPIC_STREAM_1 + "-" + UUID.randomUUID();
+        broker.addTopics(inputTopic, outputTopic);
+        streamProperties.put(BOOTSTRAP_SERVERS_CONFIG, broker.getBrokersAsString());
     }
 
     @Test
-    void copyDataFromTopicToTopic() {
+    void copyDataFromTopicToTopic(EmbeddedKafkaBroker broker) {
         int expectedRecords = 100;
-        SimpleProducer.produce(expectedRecords, INPUT_TOPIC_STREAM);
-        CopyStream.copyDataFromTopicToTopic(getStreamProperties(), INPUT_TOPIC_STREAM, OUTPUT_TOPIC_STREAM_1);
-        int recordCount = SimpleConsumer.consume(OUTPUT_TOPIC_STREAM_1);
+
+        produceRecords(expectedRecords, inputTopic, broker);
+        CopyStream.copyDataFromTopicToTopic(streamProperties, inputTopic, outputTopic);
+        int recordCount = consumeRecords(outputTopic, broker);
 
         assertEquals(expectedRecords, recordCount);
     }

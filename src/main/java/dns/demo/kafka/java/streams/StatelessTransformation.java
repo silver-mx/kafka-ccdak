@@ -7,6 +7,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.KStream;
 
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.function.Consumer;
 
@@ -31,7 +32,7 @@ public class StatelessTransformation {
     public static void main(String[] args) {
         SimpleProducer.produce(100, INPUT_TOPIC_STREAM);
         StatelessTransformation.splitStreamIntoTwoStreams(getStreamProperties(), INPUT_TOPIC_STREAM, OUTPUT_TOPIC_STREAM_1, OUTPUT_TOPIC_STREAM_2);
-        int recordCount1 = SimpleConsumer.consume(OUTPUT_TOPIC_STREAM_1);
-        int recordCount2 = SimpleConsumer.consume(OUTPUT_TOPIC_STREAM_2);
+        System.out.println("recordCount1 = " + SimpleConsumer.consume(OUTPUT_TOPIC_STREAM_1));
+        System.out.println("recordCount2 = " + SimpleConsumer.consume(OUTPUT_TOPIC_STREAM_2));
     }
 }
