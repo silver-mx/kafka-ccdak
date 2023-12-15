@@ -7,8 +7,8 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Branched;
 import org.apache.kafka.streams.kstream.KStream;
 
+import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Consumer;
 
@@ -25,6 +25,22 @@ public class StatelessTransformation {
         };
 
         return StreamUtils.executeKafkaStreams(props, consumer);
+    }
+
+    public static KafkaStreams mergeStreams(Properties props, String inputTopic1, String inputTopic2, String outputTopic) {
+        Consumer<StreamsBuilder> consumer = streamsBuilder -> {
+            KStream<String, String> source1 = streamsBuilder.stream(inputTopic1);
+            KStream<String, String> source2 = streamsBuilder.stream(inputTopic2);
+            source1.merge(source2).to(outputTopic);
+        };
+
+        return StreamUtils.executeKafkaStreams(props, consumer);
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        KafkaStreams kafkaStreams = StatelessTransformation.mergeStreams(StreamUtils.getStreamProperties(), "topic-stream-output-1", "topic-stream-output-2", "merged-topic");
+        Thread.sleep(Duration.ofSeconds(30));
+        kafkaStreams.close();
     }
 
     public static KafkaStreams filterStream(Properties streamProperties, String inputTopic, String outputTopic) {
