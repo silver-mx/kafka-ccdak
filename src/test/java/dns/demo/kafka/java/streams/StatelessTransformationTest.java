@@ -15,13 +15,11 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.StreamSupport;
 
 import static dns.demo.kafka.java.streams.util.StreamUtils.*;
 import static org.apache.kafka.streams.StreamsConfig.BOOTSTRAP_SERVERS_CONFIG;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 @EmbeddedKafka
 class StatelessTransformationTest extends AbstractKafkaTest {
@@ -55,7 +53,8 @@ class StatelessTransformationTest extends AbstractKafkaTest {
                     ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
                     Function<String, Integer> getCount = (partition) -> (int) StreamSupport.stream(records.records(partition).spliterator(), false).count();
                     recordCount1 += getCount.apply(outputTopic1);
-                    recordCount2 += getCount.apply(outputTopic2);;
+                    recordCount2 += getCount.apply(outputTopic2);
+                    ;
                 }
             }
         });
@@ -73,6 +72,52 @@ class StatelessTransformationTest extends AbstractKafkaTest {
             try (Consumer<String, String> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
                 while (recordCount != 2) {
                     recordCount += KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100)).count();
+                }
+            }
+        });
+    }
+
+    @Test
+    void flatmapStream(EmbeddedKafkaBroker broker) {
+        int expectedRecords = 10;
+
+        produceRecords(expectedRecords, inputTopic, broker);
+        kafkaStreams = StatelessTransformation.flatMapStream(streamProperties, inputTopic, outputTopic1);
+
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            int recordCountLowercase = 0;
+            int recordCountUppercase = 0;
+            int totalCount = 0;
+
+            try (Consumer<String, String> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+                while (recordCountLowercase != 10 && recordCountUppercase != 10 && totalCount != 20) {
+                    ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
+                    Function<String, Integer> count = regex -> (int) StreamSupport.stream(records.spliterator(), false)
+                            .filter(r -> !r.value().matches(regex))
+                            .count();
+                    recordCountLowercase += count.apply(".*[A-Z]+.*");
+                    recordCountUppercase += count.apply(".*[a-z]+.*");
+                    totalCount += records.count();
+                }
+            }
+        });
+    }
+
+    @Test
+    void mapStream(EmbeddedKafkaBroker broker) {
+        int expectedRecords = 10;
+
+        produceRecords(expectedRecords, inputTopic, broker);
+        kafkaStreams = StatelessTransformation.mapStream(streamProperties, inputTopic, outputTopic1);
+
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            int recordCount = 0;
+            try (Consumer<String, String> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+                while (recordCount != 10) {
+                    ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
+                    recordCount += (int) StreamSupport.stream(records.spliterator(), false)
+                            .filter(r -> !r.value().matches(".*[a-z]+.*"))
+                            .count();
                 }
             }
         });
