@@ -47,7 +47,7 @@ class CopyStreamTest extends AbstractKafkaTest {
 
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
             int recordCount = 0;
-            try (Consumer<String, String> consumer = createConsumerAndSubscribe(outputTopic, broker)) {
+            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic, broker)) {
                 while (recordCount != expectedRecords) {
                     recordCount += KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100)).count();
                 }

@@ -49,9 +49,9 @@ class StatelessTransformationTest extends AbstractKafkaTest {
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
             int recordCount1 = 0;
             int recordCount2 = 0;
-            try (Consumer<String, String> consumer = createConsumerAndSubscribe(List.of(outputTopic1, outputTopic2), broker)) {
+            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(List.of(outputTopic1, outputTopic2), broker)) {
                 while (recordCount1 != 2 && recordCount2 != 8) {
-                    ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
+                    ConsumerRecords<String, Object> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
                     Function<String, Integer> getCount = (partition) -> (int) StreamSupport.stream(records.records(partition).spliterator(), false).count();
                     recordCount1 += getCount.apply(outputTopic1);
                     recordCount2 += getCount.apply(outputTopic2);
@@ -76,7 +76,7 @@ class StatelessTransformationTest extends AbstractKafkaTest {
 
         await().atMost(Duration.ofSeconds(5)).until(() -> {
             int recordCount = 0;
-            try (Consumer<String, String> consumer = createConsumerAndSubscribe(mergedStreamTopic, broker)) {
+            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(mergedStreamTopic, broker)) {
                 recordCount += KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100)).count();
                 return recordCount == expectedRecords;
             }
@@ -92,7 +92,7 @@ class StatelessTransformationTest extends AbstractKafkaTest {
 
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
             int recordCount = 0;
-            try (Consumer<String, String> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
                 while (recordCount != 2) {
                     recordCount += KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100)).count();
                 }
@@ -112,11 +112,11 @@ class StatelessTransformationTest extends AbstractKafkaTest {
             int recordCountUppercase = 0;
             int totalCount = 0;
 
-            try (Consumer<String, String> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
                 while (recordCountLowercase != 10 && recordCountUppercase != 10 && totalCount != 20) {
-                    ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
+                    ConsumerRecords<String, Object> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
                     Function<String, Integer> count = regexNotMatch -> (int) StreamSupport.stream(records.spliterator(), false)
-                            .filter(r -> !r.value().matches(regexNotMatch))
+                            .filter(r -> !r.value().toString().matches(regexNotMatch))
                             .count();
                     recordCountLowercase += count.apply(".*?[A-Z]+");
                     recordCountUppercase += count.apply(".*?[a-z]+");
@@ -135,11 +135,11 @@ class StatelessTransformationTest extends AbstractKafkaTest {
 
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
             int recordCount = 0;
-            try (Consumer<String, String> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
                 while (recordCount != 10) {
-                    ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
+                    ConsumerRecords<String, Object> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
                     recordCount += (int) StreamSupport.stream(records.spliterator(), false)
-                            .filter(r -> !r.value().matches(".*?[a-z]+"))
+                            .filter(r -> !r.value().toString().matches(".*?[a-z]+"))
                             .count();
                 }
             }
