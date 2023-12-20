@@ -2,10 +2,11 @@ package dns.demo.kafka.java.streams;
 
 import dns.demo.kafka.AbstractKafkaTest;
 import dns.demo.kafka.java.streams.util.StreamUtils;
+import dns.demo.kafka.java.streams.util.StreamUtils.StreamPair;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.TopologyTestDriver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
@@ -53,13 +54,16 @@ class JoinsTest extends AbstractKafkaTest {
         List<Map.Entry<String, Object>> leftRecords = List.of(Map.entry(k1, "Name1"), Map.entry(k2, "Name2"), Map.entry(k3, "Name3"));
         List<Map.Entry<String, Object>> rightRecords = List.of(Map.entry(k1, "Lastname1"), Map.entry(k2, "Lastname2"), Map.entry(k4, "Lastname4"));
 
-        produceRecords(leftRecords, leftTopic, broker);
-        produceRecords(rightRecords, rightTopic, broker);
+        StreamPair pair = Joins.joinStreams(streamProperties, leftTopic, rightTopic, innerJoinTopic, leftJoinTopic, outerJoinTopic);
 
-        try (KafkaStreams ignored = Joins.joinStreams(streamProperties, leftTopic, rightTopic, innerJoinTopic, leftJoinTopic, outerJoinTopic);
-             Consumer<String, String> consumerInnerJoin = createConsumerAndSubscribe(innerJoinTopic, broker);
+        try (Consumer<String, String> consumerInnerJoin = createConsumerAndSubscribe(innerJoinTopic, broker);
              Consumer<String, String> consumerLeftJoin = createConsumerAndSubscribe(leftJoinTopic, broker);
              Consumer<String, String> consumerOuterJoin = createConsumerAndSubscribe(outerJoinTopic, broker)) {
+
+            produceRecords(leftRecords, leftTopic, broker);
+            produceRecords(rightRecords, rightTopic, broker);
+
+            TopologyTestDriver driver = new TopologyTestDriver(pair.topology(), streamProperties);
 
             Map<String, String> recordsMap = new HashMap<>();
 
@@ -70,6 +74,8 @@ class JoinsTest extends AbstractKafkaTest {
                 assertThat(recordsMap).contains(Map.entry(k2, "left=Name2, right=Lastname2"));
             });
 
+
+            driver.advanceWallClockTime(Duration.ofSeconds(30));
             recordsMap.clear();
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
@@ -90,6 +96,8 @@ class JoinsTest extends AbstractKafkaTest {
                 assertThat(recordsMap).contains(Map.entry(k1, "left=Name1, right=Lastname1"));
                 assertThat(recordsMap).contains(Map.entry(k2, "left=Name2, right=Lastname2"));
             });
+
+            //pair.kafkaStreams().close();
         }
     }
 

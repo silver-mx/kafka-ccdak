@@ -9,10 +9,8 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 @Slf4j
 public class StreamUtils {
@@ -32,6 +30,10 @@ public class StreamUtils {
     }
 
     public static KafkaStreams executeKafkaStreams(Properties props, Consumer<StreamsBuilder> streamsBuilderConsumer) {
+        return executeKafkaStreamsAndGetTopology(props, streamsBuilderConsumer).kafkaStreams();
+    }
+
+    public static StreamPair executeKafkaStreamsAndGetTopology(Properties props, Consumer<StreamsBuilder> streamsBuilderConsumer) {
         StreamsBuilder streamsBuilder = new StreamsBuilder();
         streamsBuilderConsumer.accept(streamsBuilder);
         Topology topology = streamsBuilder.build();
@@ -39,6 +41,11 @@ public class StreamUtils {
         KafkaStreams kafkaStreams = new KafkaStreams(topology, props);
         kafkaStreams.start();
 
-        return kafkaStreams;
+        return new StreamPair(kafkaStreams, topology);
     }
+
+    public record StreamPair(KafkaStreams kafkaStreams, Topology topology) {
+
+    }
+
 }
