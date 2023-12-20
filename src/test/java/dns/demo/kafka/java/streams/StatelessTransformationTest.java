@@ -4,6 +4,7 @@ import dns.demo.kafka.AbstractKafkaTest;
 import dns.demo.kafka.java.streams.util.StreamUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.streams.KafkaStreams;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
@@ -44,20 +45,19 @@ class StatelessTransformationTest extends AbstractKafkaTest {
         int expectedRecords = 10;
 
         produceRecords(expectedRecords, inputTopic, broker);
-        kafkaStreams = StatelessTransformation.splitStreamIntoTwoStreams(streamProperties, inputTopic, outputTopic1, outputTopic2);
-
-        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
-            int recordCount1 = 0;
-            int recordCount2 = 0;
-            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(List.of(outputTopic1, outputTopic2), broker)) {
+        try (KafkaStreams ignored = StatelessTransformation.splitStreamIntoTwoStreams(streamProperties, inputTopic, outputTopic1, outputTopic2);
+             Consumer<String, Object> consumer = createConsumerAndSubscribe(List.of(outputTopic1, outputTopic2), broker)) {
+            assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+                int recordCount1 = 0;
+                int recordCount2 = 0;
                 while (recordCount1 != 2 && recordCount2 != 8) {
                     ConsumerRecords<String, Object> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
                     Function<String, Integer> getCount = (partition) -> (int) StreamSupport.stream(records.records(partition).spliterator(), false).count();
                     recordCount1 += getCount.apply(outputTopic1);
                     recordCount2 += getCount.apply(outputTopic2);
                 }
-            }
-        });
+            });
+        }
     }
 
     @Test
@@ -71,16 +71,14 @@ class StatelessTransformationTest extends AbstractKafkaTest {
         produceRecords(5, inputTopic1, broker);
         produceRecords(5, inputTopic2, broker);
 
-        // Open another stream to exercise the merge
-        kafkaStreams = StatelessTransformation.mergeStreams(streamProperties, inputTopic1, inputTopic2, mergedStreamTopic);
-
-        await().atMost(Duration.ofSeconds(5)).until(() -> {
-            int recordCount = 0;
-            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(mergedStreamTopic, broker)) {
+        try (KafkaStreams ignored = StatelessTransformation.mergeStreams(streamProperties, inputTopic1, inputTopic2, mergedStreamTopic);
+             Consumer<String, Object> consumer = createConsumerAndSubscribe(mergedStreamTopic, broker)) {
+            await().atMost(Duration.ofSeconds(5)).until(() -> {
+                int recordCount = 0;
                 recordCount += KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100)).count();
                 return recordCount == expectedRecords;
-            }
-        });
+            });
+        }
     }
 
     @Test
@@ -88,16 +86,15 @@ class StatelessTransformationTest extends AbstractKafkaTest {
         int expectedRecords = 10;
 
         produceRecords(expectedRecords, inputTopic, broker);
-        kafkaStreams = StatelessTransformation.filterStream(streamProperties, inputTopic, outputTopic1);
-
-        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
-            int recordCount = 0;
-            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+        try (KafkaStreams ignored = StatelessTransformation.filterStream(streamProperties, inputTopic, outputTopic1);
+             Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+            assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+                int recordCount = 0;
                 while (recordCount != 2) {
                     recordCount += KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100)).count();
                 }
-            }
-        });
+            });
+        }
     }
 
     @Test
@@ -105,14 +102,14 @@ class StatelessTransformationTest extends AbstractKafkaTest {
         int expectedRecords = 10;
 
         produceRecords(expectedRecords, inputTopic, broker);
-        kafkaStreams = StatelessTransformation.flatMapStream(streamProperties, inputTopic, outputTopic1);
 
-        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
-            int recordCountLowercase = 0;
-            int recordCountUppercase = 0;
-            int totalCount = 0;
+        try (KafkaStreams ignored = StatelessTransformation.flatMapStream(streamProperties, inputTopic, outputTopic1);
+             Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+            assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+                int recordCountLowercase = 0;
+                int recordCountUppercase = 0;
+                int totalCount = 0;
 
-            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
                 while (recordCountLowercase != 10 && recordCountUppercase != 10 && totalCount != 20) {
                     ConsumerRecords<String, Object> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
                     Function<String, Integer> count = regexNotMatch -> (int) StreamSupport.stream(records.spliterator(), false)
@@ -122,8 +119,8 @@ class StatelessTransformationTest extends AbstractKafkaTest {
                     recordCountUppercase += count.apply(".*?[a-z]+");
                     totalCount += records.count();
                 }
-            }
-        });
+            });
+        }
     }
 
     @Test
@@ -131,18 +128,17 @@ class StatelessTransformationTest extends AbstractKafkaTest {
         int expectedRecords = 10;
 
         produceRecords(expectedRecords, inputTopic, broker);
-        kafkaStreams = StatelessTransformation.mapStream(streamProperties, inputTopic, outputTopic1);
-
-        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
-            int recordCount = 0;
-            try (Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+        try (KafkaStreams ignored = StatelessTransformation.mapStream(streamProperties, inputTopic, outputTopic1);
+             Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic1, broker)) {
+            assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+                int recordCount = 0;
                 while (recordCount != 10) {
                     ConsumerRecords<String, Object> records = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
                     recordCount += (int) StreamSupport.stream(records.spliterator(), false)
                             .filter(r -> !r.value().toString().matches(".*?[a-z]+"))
                             .count();
                 }
-            }
-        });
+            });
+        }
     }
 }

@@ -7,8 +7,6 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.streams.KafkaStreams;
-import org.junit.jupiter.api.AfterEach;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
@@ -24,15 +22,6 @@ import java.util.concurrent.Future;
 import static java.util.Objects.nonNull;
 
 public class AbstractKafkaTest {
-
-    protected KafkaStreams kafkaStreams;
-
-    @AfterEach
-    protected void closeKafkaStreams() {
-        if (nonNull(kafkaStreams)) {
-            kafkaStreams.close();
-        }
-    }
 
     public List<RecordMetadata> produceRecords(int numRecords, String topic, EmbeddedKafkaBroker broker) {
         Map<String, Object> propsMap = SimpleProducer.getProducerProperties(broker.getBrokersAsString());
@@ -67,19 +56,19 @@ public class AbstractKafkaTest {
         return KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(1)).count();
     }
 
-    public <K,V> Consumer<K, V> createConsumerAndSubscribe(String topic, EmbeddedKafkaBroker broker) {
+    public <K, V> Consumer<K, V> createConsumerAndSubscribe(String topic, EmbeddedKafkaBroker broker) {
         return createConsumerAndSubscribe(List.of(topic), broker, Collections.emptyMap());
     }
 
-    public <K,V> Consumer<K, V> createConsumerAndSubscribe(List<String> topics, EmbeddedKafkaBroker broker) {
+    public <K, V> Consumer<K, V> createConsumerAndSubscribe(List<String> topics, EmbeddedKafkaBroker broker) {
         return createConsumerAndSubscribe(topics, broker, Collections.emptyMap());
     }
 
-    public <K,V> Consumer<K, V> createConsumerAndSubscribe(String topic, EmbeddedKafkaBroker broker, Map<String, Object> extraPropsMap) {
+    public <K, V> Consumer<K, V> createConsumerAndSubscribe(String topic, EmbeddedKafkaBroker broker, Map<String, Object> extraPropsMap) {
         return createConsumerAndSubscribe(List.of(topic), broker, extraPropsMap);
     }
 
-    public <K,V> Consumer<K, V> createConsumerAndSubscribe(List<String> topics, EmbeddedKafkaBroker broker, Map<String, Object> extraPropsMap) {
+    public <K, V> Consumer<K, V> createConsumerAndSubscribe(List<String> topics, EmbeddedKafkaBroker broker, Map<String, Object> extraPropsMap) {
         Map<String, Object> propsMap = SimpleConsumer.getConsumerProperties(broker.getBrokersAsString());
         propsMap.putAll(extraPropsMap);
         DefaultKafkaConsumerFactory<K, V> factory = new DefaultKafkaConsumerFactory<>(propsMap);
