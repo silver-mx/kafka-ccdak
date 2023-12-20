@@ -4,6 +4,7 @@ import dns.demo.kafka.java.pubsub.SimpleConsumer;
 import dns.demo.kafka.java.pubsub.SimpleProducer;
 import jakarta.annotation.Nullable;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -69,7 +70,8 @@ public class AbstractKafkaTest {
     }
 
     public <K, V> Consumer<K, V> createConsumerAndSubscribe(List<String> topics, EmbeddedKafkaBroker broker, Map<String, Object> extraPropsMap) {
-        Map<String, Object> propsMap = SimpleConsumer.getConsumerProperties(broker.getBrokersAsString());
+        Map<String, Object> propsMap = KafkaTestUtils.consumerProps("testGroup", "true", broker);
+        propsMap.putAll(SimpleConsumer.getConsumerProperties(broker.getBrokersAsString()));
         propsMap.putAll(extraPropsMap);
         DefaultKafkaConsumerFactory<K, V> factory = new DefaultKafkaConsumerFactory<>(propsMap);
         Consumer<K, V> consumer = factory.createConsumer();
