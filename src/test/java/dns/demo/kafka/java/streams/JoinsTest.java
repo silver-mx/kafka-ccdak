@@ -52,6 +52,8 @@ class JoinsTest extends AbstractKafkaTest {
         String k3 = "k3";
         String k4 = "k4";
 
+        broker.getTopics();
+
         List<Map.Entry<String, String>> leftRecords = List.of(Map.entry(k1, "Name1"), Map.entry(k2, "Name2"), Map.entry(k3, "Name3"));
         List<Map.Entry<String, String>> rightRecords = List.of(Map.entry(k1, "Lastname1"), Map.entry(k2, "Lastname2"), Map.entry(k4, "Lastname4"));
 

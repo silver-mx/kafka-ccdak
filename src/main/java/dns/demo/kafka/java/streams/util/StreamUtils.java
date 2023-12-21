@@ -12,6 +12,8 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.apache.kafka.streams.StreamsConfig.WINDOW_SIZE_MS_CONFIG;
+
 @Slf4j
 public class StreamUtils {
     public static final String INPUT_TOPIC_STREAM = "topic-stream";
