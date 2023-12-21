@@ -3,19 +3,20 @@ package dns.demo.kafka.java.streams;
 import dns.demo.kafka.AbstractKafkaTest;
 import dns.demo.kafka.java.streams.util.StreamUtils;
 import dns.demo.kafka.java.streams.util.StreamUtils.StreamPair;
-import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.TestInputTopic;
+import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.TopologyTestDriver;
+import org.apache.kafka.streams.test.TestRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
-import org.springframework.kafka.test.utils.KafkaTestUtils;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
-import java.util.stream.StreamSupport;
 
 import static java.util.stream.Collectors.*;
 import static org.apache.kafka.streams.StreamsConfig.BOOTSTRAP_SERVERS_CONFIG;
@@ -51,60 +52,68 @@ class JoinsTest extends AbstractKafkaTest {
         String k3 = "k3";
         String k4 = "k4";
 
-        List<Map.Entry<String, Object>> leftRecords = List.of(Map.entry(k1, "Name1"), Map.entry(k2, "Name2"), Map.entry(k3, "Name3"));
-        List<Map.Entry<String, Object>> rightRecords = List.of(Map.entry(k1, "Lastname1"), Map.entry(k2, "Lastname2"), Map.entry(k4, "Lastname4"));
+        List<Map.Entry<String, String>> leftRecords = List.of(Map.entry(k1, "Name1"), Map.entry(k2, "Name2"), Map.entry(k3, "Name3"));
+        List<Map.Entry<String, String>> rightRecords = List.of(Map.entry(k1, "Lastname1"), Map.entry(k2, "Lastname2"), Map.entry(k4, "Lastname4"));
 
         StreamPair pair = Joins.joinStreams(streamProperties, leftTopic, rightTopic, innerJoinTopic, leftJoinTopic, outerJoinTopic);
 
-        try (Consumer<String, String> consumerInnerJoin = createConsumerAndSubscribe(innerJoinTopic, broker);
-             Consumer<String, String> consumerLeftJoin = createConsumerAndSubscribe(leftJoinTopic, broker);
-             Consumer<String, String> consumerOuterJoin = createConsumerAndSubscribe(outerJoinTopic, broker)) {
+        try (KafkaStreams streams = pair.kafkaStreams();
+             TopologyTestDriver testDriver = createTopologyTestDriver(pair.topology(), Serdes.StringSerde.class, Serdes.StringSerde.class);
+             Serdes.StringSerde stringSerde = new Serdes.StringSerde()) {
 
-            produceRecords(leftRecords, leftTopic, broker);
-            produceRecords(rightRecords, rightTopic, broker);
+            TestInputTopic<String, String> leftInputTopic = testDriver.createInputTopic(leftTopic, stringSerde.serializer(), stringSerde.serializer());
+            TestInputTopic<String, String> rightInputTopic = testDriver.createInputTopic(rightTopic, stringSerde.serializer(), stringSerde.serializer());
+            produceRecords(leftRecords, leftInputTopic);
+            produceRecords(rightRecords, rightInputTopic);
 
-            TopologyTestDriver driver = new TopologyTestDriver(pair.topology(), streamProperties);
+            // Start stream
+            streams.start();
 
             Map<String, String> recordsMap = new HashMap<>();
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                recordsMap.putAll(consumeRecords(innerJoinTopic, consumerInnerJoin));
+                recordsMap.putAll(consumeRecords(innerJoinTopic, testDriver));
                 assertThat(recordsMap).hasSize(2);
                 assertThat(recordsMap).contains(Map.entry(k1, "left=Name1, right=Lastname1"));
                 assertThat(recordsMap).contains(Map.entry(k2, "left=Name2, right=Lastname2"));
             });
 
-
-            driver.advanceWallClockTime(Duration.ofSeconds(30));
             recordsMap.clear();
+            /* NOTE: It is required to produce a record with time in the future to advance the stream time and let it know that
+             * the join window (1 second) has been closed. This is required for the leftJoin and outerJoin functions to
+             * publish null values when one of the join sides has missing values. This is one effect caused by
+             * JoinWindows.ofTimeDifferenceWithNoGrace.
+             *  */
+            leftInputTopic.pipeInput("randomKey", "randomValue", Instant.now().plusSeconds(5));
+
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                recordsMap.putAll(consumeRecords(leftJoinTopic, consumerLeftJoin));
+                recordsMap.putAll(consumeRecords(leftJoinTopic, testDriver));
                 assertThat(recordsMap).hasSize(3);
-                assertThat(recordsMap).contains(Map.entry(k3, "left=Name3, right=null"));
                 assertThat(recordsMap).contains(Map.entry(k1, "left=Name1, right=Lastname1"));
                 assertThat(recordsMap).contains(Map.entry(k2, "left=Name2, right=Lastname2"));
+                assertThat(recordsMap).contains(Map.entry(k3, "left=Name3, right=null"));
             });
 
             recordsMap.clear();
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-                recordsMap.putAll(consumeRecords(outerJoinTopic, consumerOuterJoin));
+                recordsMap.putAll(consumeRecords(outerJoinTopic, testDriver));
                 assertThat(recordsMap).hasSize(4);
                 assertThat(recordsMap).contains(Map.entry(k4, "left=null, right=Lastname4"));
                 assertThat(recordsMap).contains(Map.entry(k3, "left=Name3, right=null"));
                 assertThat(recordsMap).contains(Map.entry(k1, "left=Name1, right=Lastname1"));
                 assertThat(recordsMap).contains(Map.entry(k2, "left=Name2, right=Lastname2"));
             });
-
-            //pair.kafkaStreams().close();
         }
     }
 
-    private Map<String, String> consumeRecords(String topic, Consumer<String, String> consumer) {
-        ConsumerRecords<String, String> consumerRecords = KafkaTestUtils.getRecords(consumer, Duration.ofMillis(100));
-        return StreamSupport.stream(consumerRecords.records(topic).spliterator(), false)
-                .collect(groupingBy(ConsumerRecord::key,
-                        mapping(ConsumerRecord::value, reducing("", (val1, val2) -> val2))));
+    private Map<String, String> consumeRecords(String topic, TopologyTestDriver testDriver) {
+        try (Serdes.StringSerde stringSerde = new Serdes.StringSerde()) {
+            TestOutputTopic<String, String> outputTopic = testDriver.createOutputTopic(topic, stringSerde.deserializer(), stringSerde.deserializer());
+            List<TestRecord<String, String>> records = outputTopic.readRecordsToList();
+            return records.stream().collect(groupingBy(TestRecord::key,
+                    mapping(TestRecord::value, reducing("", (val1, val2) -> val2))));
+        }
     }
 }

@@ -4,20 +4,22 @@ import dns.demo.kafka.java.pubsub.SimpleConsumer;
 import dns.demo.kafka.java.pubsub.SimpleProducer;
 import jakarta.annotation.Nullable;
 import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.TestInputTopic;
+import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.TopologyTestDriver;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.time.Instant;
+import java.util.*;
 import java.util.concurrent.Future;
 
 import static java.util.Objects.nonNull;
@@ -45,6 +47,10 @@ public class AbstractKafkaTest {
                 throw new IllegalStateException(e);
             }
         }).toList();
+    }
+
+    public <K, V> void produceRecords(List<Map.Entry<K, V>> records, TestInputTopic<K, V> topic) {
+        records.forEach(record -> topic.pipeInput(record.getKey(), record.getValue(), Instant.now()));
     }
 
     public int consumeRecords(String topic, EmbeddedKafkaBroker broker, @Nullable Integer expectedRecords) {
@@ -78,5 +84,14 @@ public class AbstractKafkaTest {
         consumer.subscribe(topics);
 
         return consumer;
+    }
+
+    protected TopologyTestDriver createTopologyTestDriver(Topology topology, Class<? extends Serdes.WrapperSerde<?>> keySerde,
+                                                          Class<? extends Serdes.WrapperSerde<?>> valueSerde) {
+        Properties testDriverProps = new Properties();
+        testDriverProps.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, keySerde.getName());
+        testDriverProps.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, valueSerde.getName());
+
+        return new TopologyTestDriver(topology, testDriverProps);
     }
 }

@@ -30,10 +30,7 @@ public class StreamUtils {
     }
 
     public static KafkaStreams executeKafkaStreams(Properties props, Consumer<StreamsBuilder> streamsBuilderConsumer) {
-        return executeKafkaStreamsAndGetTopology(props, streamsBuilderConsumer).kafkaStreams();
-    }
-
-    public static StreamPair executeKafkaStreamsAndGetTopology(Properties props, Consumer<StreamsBuilder> streamsBuilderConsumer) {
+        //return executeKafkaStreamsAndGetTopology(props, streamsBuilderConsumer).kafkaStreams();
         StreamsBuilder streamsBuilder = new StreamsBuilder();
         streamsBuilderConsumer.accept(streamsBuilder);
         Topology topology = streamsBuilder.build();
@@ -41,11 +38,18 @@ public class StreamUtils {
         KafkaStreams kafkaStreams = new KafkaStreams(topology, props);
         kafkaStreams.start();
 
-        return new StreamPair(kafkaStreams, topology);
+        return new StreamPair(kafkaStreams, topology).kafkaStreams();
+    }
+
+    public static StreamPair executeKafkaStreamsAndGetTopology(Properties props, Consumer<StreamsBuilder> streamsBuilderConsumer) {
+        StreamsBuilder streamsBuilder = new StreamsBuilder();
+        streamsBuilderConsumer.accept(streamsBuilder);
+        Topology topology = streamsBuilder.build();
+
+        return new StreamPair(new KafkaStreams(topology, props), topology);
     }
 
     public record StreamPair(KafkaStreams kafkaStreams, Topology topology) {
-
     }
 
 }
