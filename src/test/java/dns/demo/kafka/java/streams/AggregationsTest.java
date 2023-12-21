@@ -56,11 +56,13 @@ class AggregationsTest extends AbstractKafkaTest {
         String outputTopicCountRecords = "count-records-" + outputTopic;
         String outputTopicReducedString = "reduce-string-" + outputTopic;
 
-        try (KafkaStreams ignored = Aggregations.groupByKey(streamProperties, inputTopic, outputTopicCountChars,
+        try (KafkaStreams streams = Aggregations.groupByKey(streamProperties, inputTopic, outputTopicCountChars,
                 outputTopicCountRecords, outputTopicReducedString);
              Consumer<String, Integer> consumerInt = createConsumerAndSubscribe(outputTopicCountChars, broker, extraConsumerIntProps);
              Consumer<String, Long> consumerLong = createConsumerAndSubscribe(outputTopicCountRecords, broker, extraConsumerLongProps);
              Consumer<String, String> consumerStr = createConsumerAndSubscribe(outputTopicReducedString, broker)) {
+
+            streams.start();
 
             await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
                 Map<String, Optional<Integer>> recordsCountCharsMap = getRecordsCountCharsMap(consumerInt, outputTopicCountChars);

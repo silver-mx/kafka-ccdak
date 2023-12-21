@@ -31,12 +31,12 @@ public class AbstractKafkaTest {
         return SimpleProducer.produce(numRecords, propsMap, topic);
     }
 
-    public List<RecordMetadata> produceRecords(List<Map.Entry<String, Object>> records, String topic, EmbeddedKafkaBroker broker) {
+    public <K, V> List<RecordMetadata> produceRecords(List<Map.Entry<K, V>> records, String topic, EmbeddedKafkaBroker broker) {
         Map<String, Object> propsMap = SimpleProducer.getProducerProperties(broker.getBrokersAsString());
-        DefaultKafkaProducerFactory<String, Object> producerFactory = new DefaultKafkaProducerFactory<>(propsMap);
+        DefaultKafkaProducerFactory<K, V> producerFactory = new DefaultKafkaProducerFactory<>(propsMap);
         List<Future<RecordMetadata>> futures = new ArrayList<>(records.size());
 
-        try (Producer<String, Object> producer = producerFactory.createProducer()) {
+        try (Producer<K, V> producer = producerFactory.createProducer()) {
             records.forEach(entry -> futures.add(producer.send(new ProducerRecord<>(topic, entry.getKey(), entry.getValue()))));
         }
 
@@ -47,10 +47,6 @@ public class AbstractKafkaTest {
                 throw new IllegalStateException(e);
             }
         }).toList();
-    }
-
-    public <K, V> void produceRecords(List<Map.Entry<K, V>> records, TestInputTopic<K, V> topic) {
-        records.forEach(record -> topic.pipeInput(record.getKey(), record.getValue(), Instant.now()));
     }
 
     public int consumeRecords(String topic, EmbeddedKafkaBroker broker, @Nullable Integer expectedRecords) {

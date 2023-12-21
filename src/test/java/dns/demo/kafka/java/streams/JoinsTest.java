@@ -63,8 +63,8 @@ class JoinsTest extends AbstractKafkaTest {
 
             TestInputTopic<String, String> leftInputTopic = testDriver.createInputTopic(leftTopic, stringSerde.serializer(), stringSerde.serializer());
             TestInputTopic<String, String> rightInputTopic = testDriver.createInputTopic(rightTopic, stringSerde.serializer(), stringSerde.serializer());
-            produceRecords(leftRecords, leftInputTopic);
-            produceRecords(rightRecords, rightInputTopic);
+            leftRecords.forEach(record -> leftInputTopic.pipeInput(record.getKey(), record.getValue(), Instant.now()));
+            rightRecords.forEach(record -> rightInputTopic.pipeInput(record.getKey(), record.getValue(), Instant.now()));
 
             // Start stream
             streams.start();

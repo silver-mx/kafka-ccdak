@@ -31,6 +31,7 @@ public class MiscUtils {
             });
 
             try {
+                streams.start();
                 latch.await();
             } catch (final Throwable e) {
                 System.out.println(e.getMessage());

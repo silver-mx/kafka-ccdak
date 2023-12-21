@@ -38,8 +38,11 @@ class CopyStreamTest extends AbstractKafkaTest {
         int expectedRecords = 10;
 
         produceRecords(expectedRecords, inputTopic, broker);
-        try (KafkaStreams ignored = CopyStream.copyDataFromTopicToTopic(streamProperties, inputTopic, outputTopic);
+        try (KafkaStreams streams = CopyStream.copyDataFromTopicToTopic(streamProperties, inputTopic, outputTopic);
              Consumer<String, Object> consumer = createConsumerAndSubscribe(outputTopic, broker)) {
+
+            streams.start();
+
             assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
                 int recordCount = 0;
                 while (recordCount != expectedRecords) {
