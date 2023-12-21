@@ -6,6 +6,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.IntegerDeserializer;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.streams.KafkaStreams;
@@ -49,8 +50,12 @@ class AggregationsTest extends AbstractKafkaTest {
         Map<String, Object> extraConsumerIntProps = Map.of(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, IntegerDeserializer.class.getName());
         Map<String, Object> extraConsumerLongProps = Map.of(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class.getName());
 
-        List<Map.Entry<String, Object>> inputRecords = List.of(Map.entry(key1, "1"), Map.entry(key1, "2"), Map.entry(key2, "1"));
-        produceRecords(inputRecords, inputTopic, broker);
+        List<ProducerRecord<String, String>> inputRecords = List.of(
+                new ProducerRecord<>(inputTopic, key1, "1"),
+                new ProducerRecord<>(inputTopic, key1, "2"),
+                new ProducerRecord<>(inputTopic, key2, "1")
+        );
+        produceRecords(inputRecords, broker);
 
         String outputTopicCountChars = "count-chars-" + outputTopic;
         String outputTopicCountRecords = "count-records-" + outputTopic;

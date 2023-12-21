@@ -31,13 +31,13 @@ public class AbstractKafkaTest {
         return SimpleProducer.produce(numRecords, propsMap, topic);
     }
 
-    public <K, V> List<RecordMetadata> produceRecords(List<Map.Entry<K, V>> records, String topic, EmbeddedKafkaBroker broker) {
+    public <K, V> List<RecordMetadata> produceRecords(List<ProducerRecord<K, V>> records, EmbeddedKafkaBroker broker) {
         Map<String, Object> propsMap = SimpleProducer.getProducerProperties(broker.getBrokersAsString());
         DefaultKafkaProducerFactory<K, V> producerFactory = new DefaultKafkaProducerFactory<>(propsMap);
         List<Future<RecordMetadata>> futures = new ArrayList<>(records.size());
 
         try (Producer<K, V> producer = producerFactory.createProducer()) {
-            records.forEach(entry -> futures.add(producer.send(new ProducerRecord<>(topic, entry.getKey(), entry.getValue()))));
+            records.forEach(r -> futures.add(producer.send(new ProducerRecord<>(r.topic(), r.key(), r.value()))));
         }
 
         return futures.stream().map(f -> {
