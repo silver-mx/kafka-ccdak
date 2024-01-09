@@ -8,10 +8,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.function.BiFunction;
 import java.util.stream.IntStream;
@@ -83,7 +80,7 @@ public class SimpleProducer {
                 BUFFER_MEMORY_CONFIG, "12582912",
                 CONNECTIONS_MAX_IDLE_MS_CONFIG, "300000"));
 
-        return producerProperties;
+        return Collections.unmodifiableMap(producerProperties);
     }
 
     public static void main(String[] args) {
