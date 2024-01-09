@@ -1,9 +1,7 @@
 package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.util.ClusterUtils;
-import org.apache.kafka.clients.Metadata;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -12,14 +10,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
+
+import static org.apache.kafka.clients.producer.ProducerConfig.*;
 
 public class SimpleProducer {
 
     public static void produce(int numRecords, String topic) {
-        produce(numRecords, getProducerProperties(ClusterUtils.getBroker()), topic);
+        Map<String, Object> producerProperties = new HashMap<>(getProducerProperties(ClusterUtils.getBroker()));
+        producerProperties.putAll(getProducerAdditionalProperties());
+
+        produce(numRecords, producerProperties, topic);
     }
 
     public static List<RecordMetadata> produce(int numMessages, Map<String, Object> props, String topic) {
@@ -41,12 +43,17 @@ public class SimpleProducer {
     }
 
     public static Map<String, Object> getProducerProperties(String broker) {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, broker);
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        return Map.of(
+                BOOTSTRAP_SERVERS_CONFIG, broker,
+                KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
+                VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+    }
 
-        return props;
+    public static Map<String, Object> getProducerAdditionalProperties() {
+        return Map.of(
+                ACKS_CONFIG, "all",
+                BUFFER_MEMORY_CONFIG, "12582912",
+                CONNECTIONS_MAX_IDLE_MS_CONFIG, "300000");
     }
 
     public static void main(String[] args) {
