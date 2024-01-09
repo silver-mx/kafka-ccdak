@@ -10,7 +10,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.*;
 import java.util.concurrent.Future;
-import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import static java.util.Objects.nonNull;
@@ -24,20 +24,29 @@ public class SimpleProducer {
     }
 
     public static List<RecordMetadata> produce(int numRecords, Map<String, Object> props, String topic) {
-        BiFunction<KafkaProducer<String, String>, Integer, Future<RecordMetadata>> producerLogic = (producer, i) ->
-                producer.send(new ProducerRecord<>(topic, "key-" + i, "message-value-" + i));
+        List<ProducerRecord<String, String>> records = IntStream.range(1, numRecords + 1)
+                .mapToObj(i -> new ProducerRecord<>(topic, "key-" + i, "message-value-" + i))
+                .toList();
 
-        return produce(numRecords, props, producerLogic);
+        return produce(records, props);
     }
 
-    private static List<RecordMetadata> produce(int numRecords, Map<String, Object> props, BiFunction<KafkaProducer<String, String>, Integer, Future<RecordMetadata>> producerLogic) {
-        List<Future<RecordMetadata>> futureList = new ArrayList<>(numRecords);
+    public static <K, V> List<RecordMetadata> produce(List<ProducerRecord<K, V>> records, Map<String, Object> props) {
+        Supplier<List<Future<RecordMetadata>>> producerLogic = () -> {
+            List<Future<RecordMetadata>> futureList = new ArrayList<>(records.size());
 
-        try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
-            IntStream.range(1, numRecords + 1).forEach(i ->
-                    futureList.add(producerLogic.apply(producer, i)));
-        }
+            try (KafkaProducer<K, V> producer = new KafkaProducer<>(props)) {
+                records.forEach(record -> futureList.add(producer.send(record)));
+            }
 
+            return futureList;
+        };
+
+        return produce(producerLogic);
+    }
+
+    private static List<RecordMetadata> produce(Supplier<List<Future<RecordMetadata>>> producerLogic) {
+        List<Future<RecordMetadata>> futureList = producerLogic.get();
         return futureList.stream().map(f -> {
             try {
                 return f.get();
@@ -47,23 +56,31 @@ public class SimpleProducer {
         }).toList();
     }
 
-    public static List<RecordMetadata> produceAdvanced(int numRecords, Map<String, Object> props, String topic) {
-        BiFunction<KafkaProducer<String, String>, Integer, Future<RecordMetadata>> producerLogic = (producer, i) -> {
-            int partition = i % 2 == 0 ? 0 : 1;
-            ProducerRecord<String, String> record = new ProducerRecord<>(topic, partition, "key-" + i, "message-value-" + i);
-            Callback callback = (metadata, exception) -> {
+    public static List<RecordMetadata> produceSelectPartition(int numRecords, Map<String, Object> props, String topic) {
+        Supplier<List<Future<RecordMetadata>>> producerLogic = () -> {
+            List<Future<RecordMetadata>> futureList = new ArrayList<>(numRecords);
 
-                if (nonNull(exception)) {
-                    log.error("Error publishing message: {}", exception.getMessage());
-                } else {
-                    log.info("Published message: key={} value={} topic={} partition={} offset={}", record.key(),
-                            record.value(), metadata.topic(), metadata.partition(), metadata.offset());
-                }
-            };
-            return producer.send(record, callback);
+            try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
+                IntStream.range(1, numRecords + 1).forEach(i -> {
+                    int partition = i % 2 == 0 ? 0 : 1;
+                    ProducerRecord<String, String> record = new ProducerRecord<>(topic, partition, "key-" + i, "message-value-" + i);
+                    Callback callback = (metadata, exception) -> {
+
+                        if (nonNull(exception)) {
+                            log.error("Error publishing message: {}", exception.getMessage());
+                        } else {
+                            log.info("Published message: key={} value={} topic={} partition={} offset={}", record.key(),
+                                    record.value(), metadata.topic(), metadata.partition(), metadata.offset());
+                        }
+                    };
+                    futureList.add(producer.send(record, callback));
+                });
+            }
+
+            return futureList;
         };
 
-        return produce(numRecords, props, producerLogic);
+        return produce(producerLogic);
     }
 
     public static Map<String, Object> getProducerProperties(String broker) {
@@ -87,7 +104,7 @@ public class SimpleProducer {
         if (args.length == 0) {
             SimpleProducer.produce(100, "inventory");
         } else if (args[0].equals("--with-callback")) {
-            SimpleProducer.produceAdvanced(100, getProducerExtendedProperties(ClusterUtils.getBroker()), "inventory");
+            SimpleProducer.produceSelectPartition(100, getProducerExtendedProperties(ClusterUtils.getBroker()), "inventory");
         }
     }
 }

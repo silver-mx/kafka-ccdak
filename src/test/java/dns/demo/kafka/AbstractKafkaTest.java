@@ -9,7 +9,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
@@ -18,7 +17,6 @@ import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Future;
 
@@ -50,7 +48,11 @@ public class AbstractKafkaTest {
     }
 
     public int consumeRecords(String topic, EmbeddedKafkaBroker broker, @Nullable Integer expectedRecords) {
-        Consumer<String, Object> consumer = createConsumerAndSubscribe(topic, broker);
+        return consumeRecords(List.of(topic), broker, expectedRecords);
+    }
+
+    public int consumeRecords(List<String> topics, EmbeddedKafkaBroker broker, @Nullable Integer expectedRecords) {
+        Consumer<String, Object> consumer = createConsumerAndSubscribe(topics, broker);
 
         if (nonNull(expectedRecords)) {
             return KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(1), expectedRecords).count();
