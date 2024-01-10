@@ -61,7 +61,14 @@ class SimpleProducerTest extends AbstractKafkaTest {
         String applePurchases = "apple_purchases";
         broker.addTopics(inventoryPurchases, applePurchases);
 
-        File file = new File(requireNonNull(this.getClass().getClassLoader().getResource("lab_resources/sample_transaction_log.txt")).getPath());
+        List<ProducerRecord<String, String>> records = produceLabRecords(inventoryPurchases, applePurchases, broker);
+
+        int consumedRecords = consumeRecords(List.of(inventoryPurchases, applePurchases), broker, null);
+        assertThat(consumedRecords).isEqualTo(records.size());
+    }
+
+    static List<ProducerRecord<String, String>> produceLabRecords(String inventoryPurchases, String applePurchases, EmbeddedKafkaBroker broker) throws IOException {
+        File file = new File(requireNonNull(SimpleProducerTest.class.getClassLoader().getResource("lab_resources/sample_transaction_log.txt")).getPath());
         Path filePath = Paths.get(file.getAbsolutePath());
         List<String> lines = Files.readAllLines(filePath);
 
@@ -81,8 +88,7 @@ class SimpleProducerTest extends AbstractKafkaTest {
         List<RecordMetadata> recordMetadata = SimpleProducer.produce(records, SimpleProducer.getProducerExtendedProperties(broker.getBrokersAsString()));
         assertThat(recordMetadata).hasSize(records.size());
 
-        int consumedRecords = consumeRecords(List.of(inventoryPurchases, applePurchases), broker, null);
-        assertThat(consumedRecords).isEqualTo(records.size());
+        return records;
     }
 
 

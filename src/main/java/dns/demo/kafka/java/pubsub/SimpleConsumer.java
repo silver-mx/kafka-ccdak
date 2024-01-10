@@ -2,13 +2,14 @@ package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.util.ClusterUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static java.util.Objects.isNull;
@@ -26,6 +27,18 @@ public class SimpleConsumer {
     }
 
     public static int consume(Map<String, Object> props, String topic, Integer expectedNumRecords) {
+        return consume(props, List.of(topic), expectedNumRecords);
+    }
+
+    public static int consume(Map<String, Object> props, List<String> topics, Integer expectedNumRecords) {
+        Consumer<ConsumerRecord<String, String>> recordConsumer = record ->
+                log.info("partition={}, offset={}, key={}, value={}", record.partition(),
+                        record.offset(), record.key(), record.value());
+        return consume(props, topics, expectedNumRecords, recordConsumer);
+    }
+
+    public static int consume(Map<String, Object> props, List<String> topics, Integer expectedNumRecords,
+                              Consumer<ConsumerRecord<String, String>> recordConsumer) {
         int recordCount = 0;
         long startTime = System.currentTimeMillis();
         Predicate<Integer> consumeUntilPredicate = count -> {
@@ -34,14 +47,11 @@ public class SimpleConsumer {
         };
 
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
-            consumer.subscribe(List.of(topic));
+            consumer.subscribe(topics);
 
             while (consumeUntilPredicate.test(recordCount)) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-                records.forEach(record ->
-                        log.info("partition={}, offset={}, key={}, value={}", record.partition(),
-                                record.offset(), record.key(), record.value())
-                );
+                records.forEach(recordConsumer);
                 recordCount += records.count();
                 boolean isManualCommitRequired = props.get(ENABLE_AUTO_COMMIT_CONFIG).equals(Boolean.FALSE);
 
@@ -83,7 +93,7 @@ public class SimpleConsumer {
         int recordCount = -1;
 
         if (args.length == 0) {
-            recordCount = SimpleConsumer.consume(getConsumerProperties(ClusterUtils.getBroker()), "inventory");
+            recordCount = SimpleConsumer.consume("inventory");
         } else if (args[0].equals("--manual-commit")) {
             recordCount = SimpleConsumer.consume(getManualCommitConsumerProperties(ClusterUtils.getBroker()), "inventory");
         }
