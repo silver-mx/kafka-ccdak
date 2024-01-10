@@ -1,6 +1,7 @@
 package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.AbstractKafkaTest;
+import dns.demo.kafka.Person;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,11 +14,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
+import static dns.demo.kafka.java.pubsub.SimpleProducer.getProducerPropertiesWithAvroSerializer;
 import static dns.demo.kafka.java.streams.util.StreamUtils.INPUT_TOPIC_STREAM;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,6 +53,17 @@ class SimpleProducerTest extends AbstractKafkaTest {
 
         int consumedRecords = consumeRecords(topic, broker, producedRecords);
         assertThat(consumedRecords).isEqualTo(producedRecords);
+    }
+
+    @Test
+    void produceWithAvroSerializer(EmbeddedKafkaBroker broker) {
+        List<ProducerRecord<String, Person>> avroProducerRecords = SimpleProducer.getAvroProducerRecords(topic);
+        List<RecordMetadata> recordMetadata = SimpleProducer.produce(avroProducerRecords,
+                getProducerPropertiesWithAvroSerializer(broker.getBrokersAsString(), "mock://fake-registry:8081"));
+        assertThat(recordMetadata).hasSize(avroProducerRecords.size());
+
+        int consumedRecords = consumeRecords(topic, broker, avroProducerRecords.size());
+        assertThat(consumedRecords).isEqualTo(avroProducerRecords.size());
     }
 
     @Test

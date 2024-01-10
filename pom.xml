@@ -2,20 +2,44 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0</version>
+        <version>3.2.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
     <groupId>dns.demo.kafka</groupId>
     <artifactId>kafka-ccdak</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>kafka-ccdak</name>
     <description>Project for CCDAK course in CloudGuru</description>
+
     <properties>
         <java.version>21</java.version>
+        <avro.version>1.11.3</avro.version>
+        <schemaRegistryUrl>http://dell:8081</schemaRegistryUrl>
+        <schemaRegistryBasicAuthUserInfo></schemaRegistryBasicAuthUserInfo>
+        <!--See example at https://github.com/confluentinc/examples/blob/7.5.0-post/clients/avro/pom.xml-->
+        <io.confluent.schema-registry.version>7.5.0</io.confluent.schema-registry.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>confluent</id>
+            <name>Confluent</name>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -43,6 +67,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-logging</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+            <version>${io.confluent.schema-registry.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -95,6 +124,42 @@
                         </exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro-maven-plugin</artifactId>
+                <version>${avro.version}</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>schema</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.basedir}/src/main/resources/avro-schemas/</sourceDirectory>
+                            <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-schema-registry-maven-plugin</artifactId>
+                <version>${io.confluent.schema-registry.version}</version>
+                <configuration>
+                    <schemaRegistryUrls>
+                        <param>${schemaRegistryUrl}</param>
+                    </schemaRegistryUrls>
+                    <userInfoConfig>${schemaRegistryBasicAuthUserInfo}</userInfoConfig>
+                    <subjects>
+                        <transactions-value>
+                            src/main/resources/avro-schemas/Person.avsc
+                        </transactions-value>
+                    </subjects>
+                </configuration>
+                <goals>
+                    <goal>test-compatibility</goal>
+                </goals>
             </plugin>
         </plugins>
     </build>

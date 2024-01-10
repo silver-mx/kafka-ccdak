@@ -1,6 +1,9 @@
 package dns.demo.kafka.java.pubsub;
 
+import dns.demo.kafka.Person;
 import dns.demo.kafka.util.ClusterUtils;
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -12,7 +15,10 @@ import java.util.*;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+import static dns.demo.kafka.util.ClusterUtils.getBroker;
+import static dns.demo.kafka.util.ClusterUtils.getSchemaRegistryUrl;
 import static java.util.Objects.nonNull;
 import static org.apache.kafka.clients.producer.ProducerConfig.*;
 
@@ -20,7 +26,7 @@ import static org.apache.kafka.clients.producer.ProducerConfig.*;
 public class SimpleProducer {
 
     public static void produce(int numRecords, String topic) {
-        produce(numRecords, getProducerExtendedProperties(ClusterUtils.getBroker()), topic);
+        produce(numRecords, getProducerExtendedProperties(getBroker()), topic);
     }
 
     public static List<RecordMetadata> produce(int numRecords, Map<String, Object> props, String topic) {
@@ -100,11 +106,35 @@ public class SimpleProducer {
         return Collections.unmodifiableMap(producerProperties);
     }
 
+    public static Map<String, Object> getProducerPropertiesWithAvroSerializer(String broker, String schemaRegistryUrl) {
+        Map<String, Object> props = new HashMap<>(getProducerExtendedProperties(broker));
+        props.put(VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
+
+        /* Best practice is to disable auto.register.schemas in production
+        (see https://docs.confluent.io/platform/current/schema-registry/schema_registry_onprem_tutorial.html#auto-schema-registration)*/
+        props.put(AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS, true);
+        props.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+
+        return Collections.unmodifiableMap(props);
+    }
+
     public static void main(String[] args) {
         if (args.length == 0) {
-            SimpleProducer.produce(100, "inventory");
+            produce(100, "inventory");
         } else if (args[0].equals("--with-callback")) {
-            SimpleProducer.produceSelectPartition(100, getProducerExtendedProperties(ClusterUtils.getBroker()), "inventory");
+            produceSelectPartition(100, getProducerExtendedProperties(getBroker()), "inventory");
+        } else if (args[0].equals("--with-avro")) {
+            List<ProducerRecord<String, Person>> producerRecords = getAvroProducerRecords("employees");
+            produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
         }
+    }
+
+    public static List<ProducerRecord<String, Person>> getAvroProducerRecords(String topic) {
+        return Stream.of(
+                        new Person(125745, "Kenny", "Armstrong", "kenny@linuxacademy.com"),
+                        new Person(943256, "Terry", "Cox", "terry@linuxacademy.com")
+                )
+                .map(person -> new ProducerRecord<>(topic, String.valueOf(person.getId()), person))
+                .toList();
     }
 }
