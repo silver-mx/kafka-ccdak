@@ -143,6 +143,8 @@
                 </executions>
             </plugin>
             <plugin>
+                <!-- See https://docs.confluent.io/platform/current/schema-registry/develop/maven-plugin.html -->
+                <!-- Use schema-registry:test-compatibility -->
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-schema-registry-maven-plugin</artifactId>
                 <version>${io.confluent.schema-registry.version}</version>
@@ -152,9 +154,12 @@
                     </schemaRegistryUrls>
                     <userInfoConfig>${schemaRegistryBasicAuthUserInfo}</userInfoConfig>
                     <subjects>
-                        <transactions-value>
+                        <employees-value>
                             src/main/resources/avro-schemas/Person.avsc
-                        </transactions-value>
+                        </employees-value>
+                        <purchases-value>
+                            src/main/resources/avro-schemas/Purchase.avsc
+                        </purchases-value>
                     </subjects>
                 </configuration>
                 <goals>

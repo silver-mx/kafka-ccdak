@@ -129,7 +129,7 @@ public class SimpleProducer {
             List<ProducerRecord<String, Person>> producerRecords = getAvroProducerPersonRecords("employees");
             produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
         } else if (args[0].equals("--with-avro-lab")) {
-            List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases1");
+            List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases");
             produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
         }
     }
