@@ -6,10 +6,7 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.*;
@@ -93,6 +90,7 @@ public class SimpleProducer {
     public static Map<String, Object> getProducerProperties(String broker) {
         return Map.of(
                 BOOTSTRAP_SERVERS_CONFIG, broker,
+                RETRIES_CONFIG, 0,// Do not retry
                 KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
                 VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     }
@@ -132,8 +130,8 @@ public class SimpleProducer {
 
     public static List<ProducerRecord<String, Person>> getAvroProducerRecords(String topic) {
         return Stream.of(
-                        new Person(125745, "Kenny", "Armstrong", "kenny@linuxacademy.com"),
-                        new Person(943256, "Terry", "Cox", "terry@linuxacademy.com")
+                        new Person(125745, "Kenny", "Armstrong", "kenny@linuxacademy.com", "@kenny"),
+                        new Person(943256, "Terry", "Cox", "terry@linuxacademy.com", "@terry")
                 )
                 .map(person -> new ProducerRecord<>(topic, String.valueOf(person.getId()), person))
                 .toList();

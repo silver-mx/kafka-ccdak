@@ -1,5 +1,6 @@
 {
   "namespace": "dns.demo.kafka",
+  "compatibility": "BACKWARD",
   "type": "record",
   "name": "Person",
   "fields": [
@@ -18,6 +19,11 @@
     {
       "name": "email",
       "type": "string"
+    },
+    {
+      "name": "twitter",
+      "type": "string",
+      "default": ""
     }
   ]
 }

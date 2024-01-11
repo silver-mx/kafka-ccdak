@@ -14,13 +14,17 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static dns.demo.kafka.java.pubsub.SimpleConsumer.*;
 import static dns.demo.kafka.java.streams.util.StreamUtils.INPUT_TOPIC_STREAM;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
@@ -58,13 +62,20 @@ class SimpleConsumerTest extends AbstractKafkaTest {
 
     @Test
     void consumeWithAvroDeserializer(EmbeddedKafkaBroker broker) {
-        List<ProducerRecord<String, Person>> producedRecords = SimpleProducerTest.produceRecordsWithAvroSerializer(broker, topic);
-        assertThat(producedRecords).isNotEmpty();
+        Set<Person> expectedEmployees = SimpleProducerTest.produceRecordsWithAvroSerializer(broker, topic)
+                .stream().map(ProducerRecord::value).collect(toUnmodifiableSet());
+        assertThat(expectedEmployees).isNotEmpty();
 
-        Consumer<ConsumerRecord<String, Person>> recordConsumer = record -> assertThat(record.value()).isInstanceOf(Person.class);
+        Set<Person> actualEmployees = new HashSet<>(expectedEmployees.size());
+
+        Consumer<ConsumerRecord<String, Person>> recordConsumer = record -> {
+            assertThat(record.value()).isInstanceOf(Person.class);
+            actualEmployees.add(record.value());
+        };
         int consumedRecords = SimpleConsumer.consume(getConsumerPropertiesWithAvroSerializer(broker.getBrokersAsString(), MOCK_SCHEMA_REGISTRY_URL),
-                List.of(topic), producedRecords.size(), recordConsumer);
-        assertThat(consumedRecords).isEqualTo(producedRecords.size());
+                List.of(topic), expectedEmployees.size(), recordConsumer);
+        assertThat(consumedRecords).isEqualTo(expectedEmployees.size());
+        assertThat(actualEmployees).isEqualTo(expectedEmployees);
     }
 
     @Test
