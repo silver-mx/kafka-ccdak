@@ -99,6 +99,9 @@ public class SimpleConsumer {
         Map<String, Object> props = new HashMap<>(getConsumerProperties(broker));
         props.put(VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
         props.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+        /* if true the Avro deserialization will result in a specific model object (e.g. Person, Payment) if false
+        then the deserialization will generate a GenericRecord object.
+         */
         props.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true);
 
         return Collections.unmodifiableMap(props);

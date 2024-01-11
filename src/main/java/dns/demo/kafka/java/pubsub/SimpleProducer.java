@@ -90,7 +90,8 @@ public class SimpleProducer {
     public static Map<String, Object> getProducerProperties(String broker) {
         return Map.of(
                 BOOTSTRAP_SERVERS_CONFIG, broker,
-                RETRIES_CONFIG, 0,// Do not retry
+                // Do not retry (disabled because causes the tests to fail with NotLeaderOrFollowerException, maybe because som writes fail and cannot be retried)
+                //RETRIES_CONFIG, 0,
                 KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
                 VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     }
