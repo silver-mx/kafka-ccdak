@@ -1,6 +1,6 @@
 package dns.demo.kafka.java.pubsub;
 
-import dns.demo.kafka.Person;
+import dns.demo.kafka.domain.Person;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;

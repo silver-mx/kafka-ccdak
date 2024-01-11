@@ -1,5 +1,5 @@
 {
-  "namespace": "dns.demo.kafka",
+  "namespace": "dns.demo.kafka.domain",
   "compatibility": "BACKWARD",
   "type": "record",
   "name": "Person",

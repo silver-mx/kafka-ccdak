@@ -1,7 +1,7 @@
 package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.AbstractKafkaTest;
-import dns.demo.kafka.Person;
+import dns.demo.kafka.domain.Person;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,7 +65,7 @@ class SimpleProducerTest extends AbstractKafkaTest {
     }
 
     static List<ProducerRecord<String, Person>> produceRecordsWithAvroSerializer(EmbeddedKafkaBroker broker, String topic) {
-        List<ProducerRecord<String, Person>> avroProducerRecords = SimpleProducer.getAvroProducerRecords(topic);
+        List<ProducerRecord<String, Person>> avroProducerRecords = SimpleProducer.getAvroProducerPersonRecords(topic);
         List<RecordMetadata> recordMetadata = SimpleProducer.produce(avroProducerRecords,
                 getProducerPropertiesWithAvroSerializer(broker.getBrokersAsString(), MOCK_SCHEMA_REGISTRY_URL));
         assertThat(recordMetadata).hasSize(avroProducerRecords.size());
@@ -78,6 +78,7 @@ class SimpleProducerTest extends AbstractKafkaTest {
         String inventoryPurchases = "inventory_purchases";
         String applePurchases = "apple_purchases";
         broker.addTopics(inventoryPurchases, applePurchases);
+
 
         List<ProducerRecord<String, String>> records = produceLabRecords(inventoryPurchases, applePurchases, broker);
 

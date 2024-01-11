@@ -1,12 +1,14 @@
 package dns.demo.kafka.java.pubsub;
 
-import dns.demo.kafka.Person;
-import dns.demo.kafka.util.ClusterUtils;
+import dns.demo.kafka.domain.Person;
+import dns.demo.kafka.domain.Purchase;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
-import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.*;
@@ -124,16 +126,27 @@ public class SimpleProducer {
         } else if (args[0].equals("--with-callback")) {
             produceSelectPartition(100, getProducerExtendedProperties(getBroker()), "inventory");
         } else if (args[0].equals("--with-avro")) {
-            List<ProducerRecord<String, Person>> producerRecords = getAvroProducerRecords("employees");
+            List<ProducerRecord<String, Person>> producerRecords = getAvroProducerPersonRecords("employees");
+            produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
+        } else if (args[0].equals("--with-avro-lab")) {
+            List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases");
             produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
         }
     }
 
-    public static List<ProducerRecord<String, Person>> getAvroProducerRecords(String topic) {
+    public static List<ProducerRecord<String, Person>> getAvroProducerPersonRecords(String topic) {
         return Stream.of(
                         new Person(125745, "Kenny", "Armstrong", "kenny@linuxacademy.com", "@kenny"),
                         new Person(943256, "Terry", "Cox", "terry@linuxacademy.com", "@terry")
                 )
+                .map(person -> new ProducerRecord<>(topic, String.valueOf(person.getId()), person))
+                .toList();
+    }
+
+    public static List<ProducerRecord<String, Purchase>> getAvroProducerPurchaseRecords(String topic) {
+        return Stream.of(
+                        new Purchase(1, "apples", 17),
+                        new Purchase(2, "oranges", 5))
                 .map(person -> new ProducerRecord<>(topic, String.valueOf(person.getId()), person))
                 .toList();
     }
