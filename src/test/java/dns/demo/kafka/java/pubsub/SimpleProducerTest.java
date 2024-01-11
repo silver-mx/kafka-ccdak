@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 
+import static dns.demo.kafka.java.pubsub.SimpleProducer.getProducerExtendedProperties;
 import static dns.demo.kafka.java.pubsub.SimpleProducer.getProducerPropertiesWithAvroSerializer;
 import static dns.demo.kafka.java.streams.util.StreamUtils.INPUT_TOPIC_STREAM;
 import static java.util.Objects.requireNonNull;
@@ -37,7 +38,7 @@ class SimpleProducerTest extends AbstractKafkaTest {
     void produce(EmbeddedKafkaBroker broker) {
         int producedRecords = 5;
         List<RecordMetadata> recordMetadata = SimpleProducer.produce(
-                producedRecords, SimpleProducer.getProducerExtendedProperties(broker.getBrokersAsString()), topic);
+                producedRecords, getProducerExtendedProperties(broker.getBrokersAsString()), topic);
         assertThat(recordMetadata).hasSize(producedRecords);
 
         int consumedRecords = consumeRecords(topic, broker, producedRecords);
@@ -48,7 +49,7 @@ class SimpleProducerTest extends AbstractKafkaTest {
     void produceSelectPartition(EmbeddedKafkaBroker broker) {
         int producedRecords = 10;
         List<RecordMetadata> recordMetadata = SimpleProducer.produceSelectPartition(
-                producedRecords, SimpleProducer.getProducerExtendedProperties(broker.getBrokersAsString()), topic);
+                producedRecords, getProducerExtendedProperties(broker.getBrokersAsString()), topic);
         assertThat(recordMetadata).hasSize(producedRecords);
 
         int consumedRecords = consumeRecords(topic, broker, producedRecords);
@@ -57,13 +58,19 @@ class SimpleProducerTest extends AbstractKafkaTest {
 
     @Test
     void produceWithAvroSerializer(EmbeddedKafkaBroker broker) {
-        List<ProducerRecord<String, Person>> avroProducerRecords = SimpleProducer.getAvroProducerRecords(topic);
-        List<RecordMetadata> recordMetadata = SimpleProducer.produce(avroProducerRecords,
-                getProducerPropertiesWithAvroSerializer(broker.getBrokersAsString(), "mock://fake-registry:8081"));
-        assertThat(recordMetadata).hasSize(avroProducerRecords.size());
+        List<ProducerRecord<String, Person>> avroProducerRecords = produceRecordsWithAvroSerializer(broker, topic);
 
         int consumedRecords = consumeRecords(topic, broker, avroProducerRecords.size());
         assertThat(consumedRecords).isEqualTo(avroProducerRecords.size());
+    }
+
+    static List<ProducerRecord<String, Person>> produceRecordsWithAvroSerializer(EmbeddedKafkaBroker broker, String topic) {
+        List<ProducerRecord<String, Person>> avroProducerRecords = SimpleProducer.getAvroProducerRecords(topic);
+        List<RecordMetadata> recordMetadata = SimpleProducer.produce(avroProducerRecords,
+                getProducerPropertiesWithAvroSerializer(broker.getBrokersAsString(), MOCK_SCHEMA_REGISTRY_URL));
+        assertThat(recordMetadata).hasSize(avroProducerRecords.size());
+
+        return avroProducerRecords;
     }
 
     @Test
@@ -96,7 +103,7 @@ class SimpleProducerTest extends AbstractKafkaTest {
                 })
                 .toList();
 
-        List<RecordMetadata> recordMetadata = SimpleProducer.produce(records, SimpleProducer.getProducerExtendedProperties(broker.getBrokersAsString()));
+        List<RecordMetadata> recordMetadata = SimpleProducer.produce(records, getProducerExtendedProperties(broker.getBrokersAsString()));
         assertThat(recordMetadata).hasSize(records.size());
 
         return records;

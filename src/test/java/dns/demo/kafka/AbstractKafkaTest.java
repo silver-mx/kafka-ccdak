@@ -24,6 +24,8 @@ import static java.util.Objects.nonNull;
 
 public class AbstractKafkaTest {
 
+    public static final String MOCK_SCHEMA_REGISTRY_URL = "mock://fake-registry:8081";
+
     public List<RecordMetadata> produceRecords(int numRecords, String topic, EmbeddedKafkaBroker broker) {
         Map<String, Object> propsMap = SimpleProducer.getProducerProperties(broker.getBrokersAsString());
         return SimpleProducer.produce(numRecords, propsMap, topic);

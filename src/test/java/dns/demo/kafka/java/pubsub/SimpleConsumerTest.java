@@ -1,6 +1,7 @@
 package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.AbstractKafkaTest;
+import dns.demo.kafka.Person;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -18,8 +19,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-import static dns.demo.kafka.java.pubsub.SimpleConsumer.getConsumerProperties;
-import static dns.demo.kafka.java.pubsub.SimpleConsumer.getManualCommitConsumerProperties;
+import static dns.demo.kafka.java.pubsub.SimpleConsumer.*;
 import static dns.demo.kafka.java.streams.util.StreamUtils.INPUT_TOPIC_STREAM;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,6 +54,17 @@ class SimpleConsumerTest extends AbstractKafkaTest {
 
         int consumedRecords = SimpleConsumer.consume(getManualCommitConsumerProperties(broker.getBrokersAsString()), topic, NUM_RECORDS);
         assertThat(consumedRecords).isEqualTo(NUM_RECORDS);
+    }
+
+    @Test
+    void consumeWithAvroDeserializer(EmbeddedKafkaBroker broker) {
+        List<ProducerRecord<String, Person>> producedRecords = SimpleProducerTest.produceRecordsWithAvroSerializer(broker, topic);
+        assertThat(producedRecords).isNotEmpty();
+
+        Consumer<ConsumerRecord<String, Person>> recordConsumer = record -> assertThat(record.value()).isInstanceOf(Person.class);
+        int consumedRecords = SimpleConsumer.consume(getConsumerPropertiesWithAvroSerializer(broker.getBrokersAsString(), MOCK_SCHEMA_REGISTRY_URL),
+                List.of(topic), producedRecords.size(), recordConsumer);
+        assertThat(consumedRecords).isEqualTo(producedRecords.size());
     }
 
     @Test
