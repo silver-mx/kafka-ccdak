@@ -1,5 +1,6 @@
 {
   "namespace": "dns.demo.kafka.domain",
+  // This field seems to be ignored. The compatibility still needs to be set to FORWARD in the topic (default is always BACKWARD)
   "compatibility": "FORWARD",
   "type": "record",
   "name": "Purchase",
@@ -14,6 +15,10 @@
     },
     {
       "name": "quantity",
+      "type": "int"
+    },
+    {
+      "name": "member_id",
       "type": "int"
     }
   ]

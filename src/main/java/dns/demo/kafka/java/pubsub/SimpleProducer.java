@@ -129,7 +129,7 @@ public class SimpleProducer {
             List<ProducerRecord<String, Person>> producerRecords = getAvroProducerPersonRecords("employees");
             produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
         } else if (args[0].equals("--with-avro-lab")) {
-            List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases");
+            List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases1");
             produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
         }
     }
@@ -145,8 +145,9 @@ public class SimpleProducer {
 
     public static List<ProducerRecord<String, Purchase>> getAvroProducerPurchaseRecords(String topic) {
         return Stream.of(
-                        new Purchase(1, "apples", 17),
-                        new Purchase(2, "oranges", 5))
+                        new Purchase(1, "apples", 17, 123),
+                        new Purchase(2, "oranges", 5, 456)
+                )
                 .map(person -> new ProducerRecord<>(topic, String.valueOf(person.getId()), person))
                 .toList();
     }
