@@ -6,20 +6,22 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.CommonClientConfigs;
-import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static dns.demo.kafka.util.ClusterUtils.getBroker;
-import static dns.demo.kafka.util.ClusterUtils.getSchemaRegistryUrl;
+import static dns.demo.kafka.util.ClusterUtils.*;
 import static java.util.Objects.nonNull;
 import static org.apache.kafka.clients.producer.ProducerConfig.*;
 
@@ -121,16 +123,17 @@ public class SimpleProducer {
         return Collections.unmodifiableMap(props);
     }
 
-    public static Map<String, Object> getProducerPropertiesWithTlsAndAvroSerializer(String broker, String schemaRegistryUrl) {
+    public static Map<String, Object> getProducerPropertiesWithTlsAndAvroSerializer(String broker, String schemaRegistryUrl) throws IOException {
         Map<String, Object> props = new HashMap<>(getProducerPropertiesWithAvroSerializer(broker, schemaRegistryUrl));
         props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name());
-        //props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, "");
-//        props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, "");
+
+        props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, getClientTruststorePath());
+        props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, getClientTruststorePass());
 
         return Collections.unmodifiableMap(props);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length == 0) {
             produce(100, "inventory");
         } else if (args[0].equals("--with-callback")) {
@@ -141,6 +144,9 @@ public class SimpleProducer {
         } else if (args[0].equals("--with-avro-lab")) {
             List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases");
             produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
+        } else if (args[0].equals("--with-tls-avro")) {
+            List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases");
+            produce(producerRecords, getProducerPropertiesWithTlsAndAvroSerializer(getBrokerTls(), getSchemaRegistryUrl()));
         }
     }
 
