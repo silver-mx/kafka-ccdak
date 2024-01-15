@@ -1,53 +1,85 @@
 #!/bin/bash
 
-cd ~/learn-kafka-courses/fund-kafka-security
+# This script will generate certificates for the given number of brokers and set the given password.
+# The script is adapted from https://github.com/confluentinc/learn-kafka-courses/blob/main/fund-kafka-security/scripts/keystore-create-kafka-2-3.sh
+# Call it as "./create-brokers-keystores.sh numBrokers password output-dir"
+# Example "./create-brokers-keystore.sh 1 pass123 ./.."
 
-for i in kafka-2 kafka-3
+# NOTE: The script "create-ca.sh" must be called before this one.
+
+WORKING_DIR=$(cd "$(dirname "$0")" && pwd)
+TARGET_DIR=$3
+CA_DIR="$TARGET_DIR/ca"
+BROKER_ID_LST=$(seq 1 1 "$1")
+PASSWORD=$2
+
+# If the certificate authority (CA) key and cert is not created, do it automatically
+test -e "$CA_DIR" || ./create-ca.sh "$TARGET_DIR/ca"
+
+for i in $BROKER_ID_LST
 do
-	echo "------------------------------- $i -------------------------------"
+  BROKER="broker-$i"
+  OUTPUT_DIR="$TARGET_DIR/$BROKER"
+
+  # First delete the output folder if it exists
+  test "$OUTPUT_DIR" && rm -rf "$OUTPUT_DIR"
+
+  # Create the output folder
+  mkdir "$OUTPUT_DIR"
+
+  # Generate and copy broker cnf file
+  cp "$WORKING_DIR/broker-cfg/broker.cnf" "$OUTPUT_DIR"
+  sed -i -e "s\broker-#\\$BROKER\g" "$OUTPUT_DIR/broker.cnf"
+  mv "$OUTPUT_DIR/broker.cnf" "$OUTPUT_DIR/$BROKER.cnf"
+
+	echo "------------------------------- $BROKER [$OUTPUT_DIR] -------------------------------"
 
     # Create server key & certificate signing request(.csr file)
     openssl req -new \
-    -newkey rsa:2048 \
-    -keyout $i-creds/$i.key \
-    -out $i-creds/$i.csr \
-    -config $i-creds/$i.cnf \
-    -nodes
+    -newkey rsa:4096 \
+    -keyout "$OUTPUT_DIR/$BROKER.key" \
+    -out "$OUTPUT_DIR/$BROKER.csr" \
+    -config "$OUTPUT_DIR/$BROKER.cnf" \
+    -noenc
 
-
-    # Sign server certificate with CA
+    # Sign the broker certificate with the CA
     openssl x509 -req \
     -days 3650 \
-    -in $i-creds/$i.csr \
-    -CA ca.crt \
-    -CAkey ca.key \
+    -in "$OUTPUT_DIR/$BROKER.csr" \
+    -CA "$CA_DIR/ca.crt" \
+    -CAkey "$CA_DIR/ca.key" \
     -CAcreateserial \
-    -out $i-creds/$i.crt \
-    -extfile $i-creds/$i.cnf \
+    -out "$OUTPUT_DIR/$BROKER.crt" \
+    -extfile "$OUTPUT_DIR/$BROKER.cnf" \
     -extensions v3_req
 
-    # Convert server certificate to pkcs12 format
+    # .Convert the broker certificate over to pkcs12 format
     openssl pkcs12 -export \
-    -in $i-creds/$i.crt \
-    -inkey $i-creds/$i.key \
+    -in "$OUTPUT_DIR/$BROKER.crt" \
+    -inkey "$OUTPUT_DIR/$BROKER.key" \
     -chain \
-    -CAfile ca.pem \
-    -name $i \
-    -out $i-creds/$i.p12 \
-    -password pass:confluent
+    -CAfile "$CA_DIR/ca.pem" \
+    -name "$BROKER" \
+    -out "$OUTPUT_DIR/$BROKER.p12" \
+    -password "pass:$PASSWORD"
 
-    # Create server keystore
+    # Create a keystore for the broker and import the certificate
     keytool -importkeystore \
-    -deststorepass confluent \
-    -destkeystore $i-creds/kafka.$i.keystore.pkcs12 \
-    -srckeystore $i-creds/$i.p12 \
+    -deststorepass "$PASSWORD" \
+    -destkeystore "$OUTPUT_DIR/kafka.$BROKER.keystore.pkcs12" \
+    -srckeystore "$OUTPUT_DIR/$BROKER.p12" \
     -deststoretype PKCS12  \
     -srcstoretype PKCS12 \
     -noprompt \
-    -srcstorepass confluent
+    -srcstorepass "$PASSWORD"
+
+    # Verify the keystore
+    keytool -list -v \
+        -keystore "$OUTPUT_DIR/kafka.$BROKER.keystore.pkcs12" \
+        -storepass "$PASSWORD"
 
     # Save creds
-    echo "confluent" > ${i}-creds/${i}_sslkey_creds
-    echo "confluent" > ${i}-creds/${i}_keystore_creds
+    echo "$PASSWORD" > "$OUTPUT_DIR/${BROKER}_sslkey_creds"
+    echo "$PASSWORD" > "$OUTPUT_DIR/${BROKER}_keystore_creds"
 
 done

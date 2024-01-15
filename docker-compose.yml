@@ -9,10 +9,28 @@ services:
     ports:
       - "9092:9092"
       - "9101:9101"
+      - "29094:29094"
+    networks:
+      - kafka-net
+    volumes:
+      - data-broker-1:/var/lib/kafka/data
+      - /c/Users/diego/wa/kafka-ccdak/src/main/resources/tls-certs/broker-1:/etc/kafka/secrets
     environment:
       KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://192.168.1.134:9092'
+      # ======> START TLS STUFF
+      #KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,SSL://0.0.0.0:29094,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      #KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://192.168.1.134:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,SSL://localhost:29094,PLAINTEXT_HOST://192.168.1.134:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,SSL:SSL,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_SSL_KEYSTORE_FILENAME: kafka.broker-1.keystore.pkcs12
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: broker-1_keystore_creds
+      KAFKA_SSL_KEY_CREDENTIALS: broker-1_sslkey_creds
+      #KAFKA_SSL_TRUSTSTORE_FILENAME: kafka.kafka-1.truststore.pkcs12
+      #KAFKA_SSL_TRUSTSTORE_CREDENTIALS: kafka-1_truststore_creds
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "HTTPS"
+      #KAFKA_SSL_CLIENT_AUTH: "required"
+      # ======> END TLS STUFF
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -21,7 +39,6 @@ services:
       KAFKA_JMX_HOSTNAME: 192.168.1.134
       KAFKA_PROCESS_ROLES: 'broker,controller'
       KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
-      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
@@ -43,6 +60,8 @@ services:
       - broker
     ports:
       - "8081:8081"
+    networks:
+      - kafka-net
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
@@ -64,6 +83,8 @@ services:
       - schema-registry
     ports:
       - "8093:8083"
+    networks:
+      - kafka-net
     environment:
       CONNECT_BOOTSTRAP_SERVERS: 'broker:29092'
       CONNECT_REST_ADVERTISED_HOST_NAME: connect
@@ -103,6 +124,8 @@ services:
       - ksqldb-server
     ports:
       - "9021:9021"
+    networks:
+      - kafka-net
     environment:
       CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:29092'
       CONTROL_CENTER_CONNECT_CONNECT-DEFAULT_CLUSTER: 'connect:8083'
@@ -132,6 +155,8 @@ services:
       - connect
     ports:
       - "8088:8088"
+    networks:
+      - kafka-net
     environment:
       KSQL_CONFIG_DIR: "/etc/ksql"
       KSQL_BOOTSTRAP_SERVERS: "broker:29092"
@@ -156,6 +181,8 @@ services:
   ksqldb-cli:
     image: confluentinc/cp-ksqldb-cli:7.5.2
     container_name: ksqldb-cli
+    networks:
+      - kafka-net
     depends_on:
       - broker
       - connect
@@ -169,11 +196,12 @@ services:
         #        max_attempts: 3
         window: 90s
 
-
   ksql-datagen:
     image: confluentinc/ksqldb-examples:7.5.2
     hostname: ksql-datagen
     container_name: ksql-datagen
+    networks:
+      - kafka-net
     depends_on:
       - ksqldb-server
       - broker
@@ -205,7 +233,9 @@ services:
       - broker
       - schema-registry
     ports:
-      - 8082:8082
+      - "8082:8082"
+    networks:
+      - kafka-net
     hostname: rest-proxy
     container_name: rest-proxy
     environment:
@@ -230,8 +260,8 @@ services:
       - postgres
     ports:
       - "8083:8083"
-      #networks:
-      #- kafka-cluster
+    networks:
+      - kafka-net
     environment:
       - BOOTSTRAP_SERVERS=broker:9092
       - GROUP_ID=1
@@ -248,7 +278,9 @@ services:
   postgres:
     image: quay.io/debezium/example-postgres:latest
     ports:
-      - 5432:5432
+      - "5432:5432"
+    networks:
+      - kafka-net
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password1
@@ -258,3 +290,9 @@ services:
         delay: 5s
         #        max_attempts: 3
         window: 90s
+
+volumes:
+  data-broker-1:
+
+networks:
+  kafka-net:
