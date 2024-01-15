@@ -1,20 +1,22 @@
 #!/bin/bash
 
-# This script will generate certificates for the given number of brokers and set the given password.
-# The script is adapted from https://github.com/confluentinc/learn-kafka-courses/blob/main/fund-kafka-security/scripts/keystore-create-kafka-2-3.sh
-# Call it as "./create-brokers-keystores.sh numBrokers password output-dir ca-dir"
-# Example "./create-brokers-keystore.sh 1 pass123 ./../../tls-certs ./../../tls-certs/ca"
+# This script will generate the client and brokers truststores.
+# Call it as "./create-brokers-keystores.sh numBrokers password output-dir"
+# Example "./create-brokers-keystore.sh 1 pass123 ./../../tls-certs"
 
 WORKING_DIR=$(cd "$(dirname "$0")" && pwd)
+TARGET_DIR=$3
+CA_DIR="$TARGET_DIR/ca"
 BROKER_ID_LST=$(seq 1 1 "$1")
 PASSWORD=$2
-TLS_CERTS_OUTPUT_DIR=$3
-CA_DIR=$4
+
+# If the certificate authority (CA) key and cert is not created, do it automatically
+test -e "$CA_DIR" || ./create-ca.sh "$TARGET_DIR/ca"
 
 for i in $BROKER_ID_LST
 do
   BROKER="broker-$i"
-  OUTPUT_DIR="$TLS_CERTS_OUTPUT_DIR/$BROKER"
+  OUTPUT_DIR="$TARGET_DIR/$BROKER"
 
   # First delete the output folder if it exists
   test "$OUTPUT_DIR" && rm -rf "$OUTPUT_DIR"

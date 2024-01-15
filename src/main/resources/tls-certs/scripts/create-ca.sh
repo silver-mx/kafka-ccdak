@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Create a certificate authority (CA) key and certificate
+# Call it as "./create-ca.sh output-dir"
+# Example "./create-ca.sh ./../../tls-certs/ca"
+
 WORKING_DIR=$(cd "$(dirname "$0")" && pwd)
 CA_CFG_DIR="$WORKING_DIR/ca-cfg"
 CA_OUTPUT_DIR="$1"
