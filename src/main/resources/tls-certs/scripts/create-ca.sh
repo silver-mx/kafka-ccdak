@@ -13,9 +13,11 @@ mkdir "$CA_OUTPUT_DIR"
 cp "$CA_CFG_DIR/ca.cnf" "$CA_OUTPUT_DIR"
 
 # Generate a certificate authority (CA) key and certificate
+# NOTE: No password is asked because of '-noenc'
 openssl req -x509 \
  -config "$CA_OUTPUT_DIR/ca.cnf" \
  -newkey rsa:4096 \
+ -sha512 \
  -noenc \
  -keyout "$CA_OUTPUT_DIR/ca.key" \
  -out "$CA_OUTPUT_DIR/ca.crt"

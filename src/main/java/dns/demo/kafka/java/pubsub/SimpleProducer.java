@@ -5,10 +5,11 @@ import dns.demo.kafka.domain.Purchase;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.clients.CommonClientConfigs;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.*;
@@ -116,6 +117,15 @@ public class SimpleProducer {
         (see https://docs.confluent.io/platform/current/schema-registry/schema_registry_onprem_tutorial.html#auto-schema-registration)*/
         props.put(AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS, true);
         props.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+
+        return Collections.unmodifiableMap(props);
+    }
+
+    public static Map<String, Object> getProducerPropertiesWithTlsAndAvroSerializer(String broker, String schemaRegistryUrl) {
+        Map<String, Object> props = new HashMap<>(getProducerPropertiesWithAvroSerializer(broker, schemaRegistryUrl));
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name());
+        //props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, "");
+//        props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, "");
 
         return Collections.unmodifiableMap(props);
     }

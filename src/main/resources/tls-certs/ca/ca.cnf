@@ -9,7 +9,7 @@ emailAddress = optional
 [ req ]
 prompt = no
 distinguished_name = dn
-default_md = sha384
+default_md = sha512
 default_bits = 4096
 x509_extensions = v3_ca
 

@@ -35,15 +35,18 @@ do
 	echo "------------------------------- $BROKER [$OUTPUT_DIR] -------------------------------"
 
     # Create server key & certificate signing request(.csr file)
+    # NOTE: No password is asked because of '-noenc'
     openssl req -new \
     -newkey rsa:4096 \
+    -sha512 \
+    -noenc \
     -keyout "$OUTPUT_DIR/$BROKER.key" \
     -out "$OUTPUT_DIR/$BROKER.csr" \
-    -config "$OUTPUT_DIR/$BROKER.cnf" \
-    -noenc
+    -config "$OUTPUT_DIR/$BROKER.cnf"
 
     # Sign the broker certificate with the CA
     openssl x509 -req \
+    -sha512 \
     -days 3650 \
     -in "$OUTPUT_DIR/$BROKER.csr" \
     -CA "$CA_DIR/ca.crt" \
@@ -72,6 +75,8 @@ do
     -srcstoretype PKCS12 \
     -noprompt \
     -srcstorepass "$PASSWORD"
+
+    echo "------------------------------- VERIFY KEYSTORE [$OUTPUT_DIR/kafka.$BROKER.keystore.pkcs12] -------------------------------"
 
     # Verify the keystore
     keytool -list -v \
