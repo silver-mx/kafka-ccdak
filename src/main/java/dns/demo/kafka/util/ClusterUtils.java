@@ -4,7 +4,9 @@ import org.apache.kafka.clients.admin.AdminClient;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -22,17 +24,33 @@ public class ClusterUtils {
 
 
     public static String getClientTruststorePath() {
-        File truststore = new File(requireNonNull(ClusterUtils.class.getClassLoader()
-                .getResource("tls-certs/client/truststore-client.pkcs12"))
-                .getFile());
+        return getAbsolutePath("tls-certs/client/truststore-client.pkcs12");
+    }
+
+    public static String getClientKeystorePath() {
+        return getAbsolutePath("tls-certs/client/keystore-client.pkcs12");
+    }
+
+    private static String getAbsolutePath(String path) {
+        URL resource = ClusterUtils.class.getClassLoader().getResource(path);
+        File truststore = new File(requireNonNull(resource, "Path[" + path + "] is missing").getFile());
         return truststore.getAbsolutePath();
     }
 
     public static String getClientTruststoreCredentials() throws IOException {
-        File truststorePass = new File(requireNonNull(ClusterUtils.class.getClassLoader()
-                .getResource("tls-certs/client/truststore-creds-client"))
-                .getFile());
-        return Files.readString(truststorePass.toPath());
+        return getCredentials("tls-certs/client/truststore-creds-client");
+    }
+
+    public static String getClientKeystoreCredentials() throws IOException {
+        return getCredentials("tls-certs/client/keystore-creds-client");
+    }
+
+    public static String getClientSslKeyCredentials() throws IOException {
+        return getCredentials("tls-certs/client/sslkey-creds-client");
+    }
+
+    private static String getCredentials(String path) throws IOException {
+        return Files.readString(Path.of(getAbsolutePath(path)));
     }
 
     public static String getBroker() {

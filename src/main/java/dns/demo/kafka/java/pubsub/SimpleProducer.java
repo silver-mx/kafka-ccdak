@@ -2,16 +2,14 @@ package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.domain.Person;
 import dns.demo.kafka.domain.Purchase;
+import dns.demo.kafka.util.MiscUtils;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.config.SslConfigs;
-import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.io.IOException;
@@ -116,12 +114,7 @@ public class SimpleProducer {
 
     public static Map<String, Object> getProducerPropertiesWithTls(String broker) throws IOException {
         Map<String, Object> props = new HashMap<>(getProducerExtendedProperties(broker));
-        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name());
-        props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, getClientTruststorePath());
-        props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, getClientTruststoreCredentials());
-        props.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, "PKCS12");
-
-        return Collections.unmodifiableMap(props);
+        return MiscUtils.addTlsConfigurationProperties(props);
     }
 
     public static Map<String, Object> getProducerPropertiesWithAvroSerializer(String broker, String schemaRegistryUrl) {

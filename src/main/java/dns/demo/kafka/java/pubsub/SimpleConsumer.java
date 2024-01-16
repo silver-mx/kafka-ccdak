@@ -2,16 +2,14 @@ package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.domain.Person;
 import dns.demo.kafka.util.ClusterUtils;
+import dns.demo.kafka.util.MiscUtils;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.config.SslConfigs;
-import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 import java.io.IOException;
@@ -21,7 +19,6 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static dns.demo.kafka.util.ClusterUtils.*;
-import static dns.demo.kafka.util.ClusterUtils.getClientTruststoreCredentials;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.*;
@@ -114,12 +111,7 @@ public class SimpleConsumer {
 
     public static Map<String, Object> getConsumerPropertiesWithTls(String broker) throws IOException {
         Map<String, Object> props = new HashMap<>(getConsumerProperties(broker));
-        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name());
-        props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, getClientTruststorePath());
-        props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, getClientTruststoreCredentials());
-        props.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, "PKCS12");
-
-        return Collections.unmodifiableMap(props);
+        return MiscUtils.addTlsConfigurationProperties(props);
     }
 
     public static Map<String, Object> getConsumerPropertiesWithTlsAndAvroDeserializer(String broker, String schemaRegistryUrl) throws IOException {

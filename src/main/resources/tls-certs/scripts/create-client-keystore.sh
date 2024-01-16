@@ -72,4 +72,5 @@ echo "------------------------------- Client Keystore [$OUTPUT_DIR] ------------
       -storepass "$PASSWORD"
 
   # Save creds
+  echo "$PASSWORD" > "$OUTPUT_DIR/sslkey-creds-client"
   echo "$PASSWORD" > "$OUTPUT_DIR/keystore-creds-client"
