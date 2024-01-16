@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static dns.demo.kafka.java.pubsub.SimpleConsumer.*;
@@ -72,7 +71,7 @@ class SimpleConsumerTest extends AbstractKafkaTest {
             assertThat(record.value()).isInstanceOf(Person.class);
             actualEmployees.add(record.value());
         };
-        int consumedRecords = SimpleConsumer.consume(getConsumerPropertiesWithAvroSerializer(broker.getBrokersAsString(), MOCK_SCHEMA_REGISTRY_URL),
+        int consumedRecords = SimpleConsumer.consume(getConsumerPropertiesWithAvroDeserializer(broker.getBrokersAsString(), MOCK_SCHEMA_REGISTRY_URL),
                 List.of(topic), expectedEmployees.size(), recordConsumer);
         assertThat(consumedRecords).isEqualTo(expectedEmployees.size());
         assertThat(actualEmployees).isEqualTo(expectedEmployees);

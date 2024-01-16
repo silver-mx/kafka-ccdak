@@ -45,7 +45,10 @@ public class SimpleProducer {
             List<Future<RecordMetadata>> futureList = new ArrayList<>(records.size());
 
             try (KafkaProducer<K, V> producer = new KafkaProducer<>(props)) {
-                records.forEach(record -> futureList.add(producer.send(record)));
+                records.forEach(record -> {
+                    log.info("Publishing message: key={} value={} topic={}", record.key(), record.value(), record.topic());
+                    futureList.add(producer.send(record));
+                });
             }
 
             return futureList;
@@ -111,6 +114,16 @@ public class SimpleProducer {
         return Collections.unmodifiableMap(producerProperties);
     }
 
+    public static Map<String, Object> getProducerPropertiesWithTls(String broker) throws IOException {
+        Map<String, Object> props = new HashMap<>(getProducerExtendedProperties(broker));
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name());
+        props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, getClientTruststorePath());
+        props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, getClientTruststoreCredentials());
+        props.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, "PKCS12");
+
+        return Collections.unmodifiableMap(props);
+    }
+
     public static Map<String, Object> getProducerPropertiesWithAvroSerializer(String broker, String schemaRegistryUrl) {
         Map<String, Object> props = new HashMap<>(getProducerExtendedProperties(broker));
         props.put(VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
@@ -124,11 +137,8 @@ public class SimpleProducer {
     }
 
     public static Map<String, Object> getProducerPropertiesWithTlsAndAvroSerializer(String broker, String schemaRegistryUrl) throws IOException {
-        Map<String, Object> props = new HashMap<>(getProducerPropertiesWithAvroSerializer(broker, schemaRegistryUrl));
-        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name());
-
-        props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, getClientTruststorePath());
-        props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, getClientTruststorePass());
+        Map<String, Object> props = new HashMap<>(getProducerPropertiesWithTls(broker));
+        props.putAll(new HashMap<>(getProducerPropertiesWithAvroSerializer(broker, schemaRegistryUrl)));
 
         return Collections.unmodifiableMap(props);
     }
@@ -145,8 +155,14 @@ public class SimpleProducer {
             List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases");
             produce(producerRecords, getProducerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()));
         } else if (args[0].equals("--with-tls-avro")) {
-            List<ProducerRecord<String, Purchase>> producerRecords = getAvroProducerPurchaseRecords("purchases");
+            List<ProducerRecord<String, Person>> producerRecords = getAvroProducerPersonRecords("employees-tls");
             produce(producerRecords, getProducerPropertiesWithTlsAndAvroSerializer(getBrokerTls(), getSchemaRegistryUrl()));
+        } else if (args[0].equals("--with-tls")) {
+            produce(100, getProducerPropertiesWithTls(getBrokerTls()), "inventory-tls")
+                    .forEach(metadata ->
+                            log.info("Published message: topic={} partition={} offset={}",
+                                    metadata.topic(), metadata.partition(), metadata.offset())
+                    );
         }
     }
 

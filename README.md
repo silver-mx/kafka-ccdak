@@ -43,6 +43,17 @@ Where `29094` comes from `SSL://localhost:29094` in `docker-compose-yml`:
 KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,SSL://localhost:29094,PLAINTEXT_HOST://192.168.1.134:9092'
 ```
 
+### CLI Utils
+
+The folder `kafka-ccdak/cli-utils` contains some scripts to simplify testing:
+
+ * `consume-tls.sh`: Consumes from a topic using a secure TLS connection.
+
+```bash
+Usage: ./consume-tls.sh  [broker-host-port] [topic]
+Example: ./consume-tls.sh  localhost:29094 inventory-tls
+```
+
 ### Kafka Connector
 
 #### Postgresql

@@ -1,6 +1,5 @@
 package dns.demo.kafka.util;
 
-import dns.demo.kafka.java.pubsub.SimpleProducer;
 import org.apache.kafka.clients.admin.AdminClient;
 
 import java.io.File;
@@ -13,6 +12,15 @@ import static java.util.Objects.requireNonNull;
 
 public class ClusterUtils {
 
+    public static final String KAFKA_HOST_DEFAULT = "localhost";
+    public static final int KAFKA_PORT_DEFAULT = 9092;
+    public static final int KAFKA_TLS_PORT_DEFAULT = 29094;
+    public static final int KAFKA_SCHEMA_REGISTRY_PORT_DEFAULT = 8081;
+    public static final String KAFKA_HOST_PORT_DEFAULT = String.format("%s:%d", KAFKA_HOST_DEFAULT, KAFKA_PORT_DEFAULT);
+    public static final String KAFKA_TLS_HOST_PORT_DEFAULT = String.format("%s:%d", KAFKA_HOST_DEFAULT, KAFKA_TLS_PORT_DEFAULT);
+    public static final String KAFKA_SCHEMA_REGISTRY_URL_DEFAULT = String.format("http://%s:%d", KAFKA_HOST_DEFAULT, KAFKA_SCHEMA_REGISTRY_PORT_DEFAULT);
+
+
     public static String getClientTruststorePath() {
         File truststore = new File(requireNonNull(ClusterUtils.class.getClassLoader()
                 .getResource("tls-certs/client/truststore-client.pkcs12"))
@@ -20,7 +28,7 @@ public class ClusterUtils {
         return truststore.getAbsolutePath();
     }
 
-    public static String getClientTruststorePass() throws IOException {
+    public static String getClientTruststoreCredentials() throws IOException {
         File truststorePass = new File(requireNonNull(ClusterUtils.class.getClassLoader()
                 .getResource("tls-certs/client/truststore-creds-client"))
                 .getFile());
@@ -28,15 +36,15 @@ public class ClusterUtils {
     }
 
     public static String getBroker() {
-        return Optional.ofNullable(System.getenv("KAFKA_HOST_PORT")).orElse("dell:9092");
+        return Optional.ofNullable(System.getenv("KAFKA_HOST_PORT")).orElse(KAFKA_HOST_PORT_DEFAULT);
     }
 
     public static String getBrokerTls() {
-        return Optional.ofNullable(System.getenv("KAFKA_HOST_PORT_TLS")).orElse("dell:29094");
+        return Optional.ofNullable(System.getenv("KAFKA_TLS_HOST_PORT")).orElse(KAFKA_TLS_HOST_PORT_DEFAULT);
     }
 
     public static String getSchemaRegistryUrl() {
-        return Optional.ofNullable(System.getenv("CONFLUENT_SCHEMA_REGISTRY_URL")).orElse("http://dell:8081");
+        return Optional.ofNullable(System.getenv("KAFKA_SCHEMA_REGISTRY_URL")).orElse(KAFKA_SCHEMA_REGISTRY_URL_DEFAULT);
     }
 
     public static Properties getAdminClientProperties() {

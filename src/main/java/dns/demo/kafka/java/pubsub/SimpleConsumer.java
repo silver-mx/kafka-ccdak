@@ -1,22 +1,27 @@
 package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.domain.Person;
+import dns.demo.kafka.util.ClusterUtils;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import static dns.demo.kafka.util.ClusterUtils.getBroker;
-import static dns.demo.kafka.util.ClusterUtils.getSchemaRegistryUrl;
+import static dns.demo.kafka.util.ClusterUtils.*;
+import static dns.demo.kafka.util.ClusterUtils.getClientTruststoreCredentials;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.*;
@@ -95,7 +100,7 @@ public class SimpleConsumer {
         return Collections.unmodifiableMap(props);
     }
 
-    public static Map<String, Object> getConsumerPropertiesWithAvroSerializer(String broker, String schemaRegistryUrl) {
+    public static Map<String, Object> getConsumerPropertiesWithAvroDeserializer(String broker, String schemaRegistryUrl) {
         Map<String, Object> props = new HashMap<>(getConsumerProperties(broker));
         props.put(VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
         props.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
@@ -107,7 +112,24 @@ public class SimpleConsumer {
         return Collections.unmodifiableMap(props);
     }
 
-    public static void main(String[] args) {
+    public static Map<String, Object> getConsumerPropertiesWithTls(String broker) throws IOException {
+        Map<String, Object> props = new HashMap<>(getConsumerProperties(broker));
+        props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name());
+        props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, getClientTruststorePath());
+        props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, getClientTruststoreCredentials());
+        props.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, "PKCS12");
+
+        return Collections.unmodifiableMap(props);
+    }
+
+    public static Map<String, Object> getConsumerPropertiesWithTlsAndAvroDeserializer(String broker, String schemaRegistryUrl) throws IOException {
+        Map<String, Object> props = new HashMap<>(getConsumerPropertiesWithTls(broker));
+        props.putAll(new HashMap<>(getConsumerPropertiesWithAvroDeserializer(broker, schemaRegistryUrl)));
+
+        return Collections.unmodifiableMap(props);
+    }
+
+    public static void main(String[] args) throws IOException {
         int recordCount = -1;
 
         if (args.length == 0) {
@@ -121,8 +143,19 @@ public class SimpleConsumer {
                 log.info("partition={}, offset={}, key={}, value={}", record.partition(),
                         record.offset(), record.key(), record.value());
             };
-            recordCount = consume(getConsumerPropertiesWithAvroSerializer(getBroker(), getSchemaRegistryUrl()), List.of("employees"),
+            recordCount = consume(getConsumerPropertiesWithAvroDeserializer(getBroker(), getSchemaRegistryUrl()), List.of("employees"),
                     null, recordConsumer);
+        } else if (args[0].equals("--with-tls")) {
+            recordCount = consume(getConsumerPropertiesWithTls(ClusterUtils.getBrokerTls()), "inventory-tls");
+        } else if (args[0].equals("--with-tls-avro")) {
+            Consumer<ConsumerRecord<String, Person>> recordConsumer = record ->
+            {
+                requireNonNull(record.value(), "The person value cannot be null");
+                log.info("partition={}, offset={}, key={}, value={}", record.partition(),
+                        record.offset(), record.key(), record.value());
+            };
+            recordCount = consume(getConsumerPropertiesWithTlsAndAvroDeserializer(getBrokerTls(), getSchemaRegistryUrl()),
+                    List.of("employees-tls"), null, recordConsumer);
         }
 
         log.info("recordCount=" + recordCount);
