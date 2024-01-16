@@ -9,7 +9,7 @@ req_extensions = v3_req
 countryName = SE
 organizationName = DNS
 localityName = Stockholm
-commonName = kafka-dev-ca
+commonName = kafka-broker
 
 [ v3_ca ]
 subjectKeyIdentifier=hash

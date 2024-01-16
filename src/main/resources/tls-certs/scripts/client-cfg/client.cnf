@@ -9,7 +9,7 @@ req_extensions = v3_req
 countryName = SE
 organizationName = DNS
 localityName = Stockholm
-commonName = kafka-broker
+commonName = kafka-dev-ca
 
 [ v3_ca ]
 subjectKeyIdentifier=hash
@@ -26,6 +26,5 @@ extendedKeyUsage = serverAuth, clientAuth
 subjectAltName = @alt_names
 
 [ alt_names ]
-DNS.1=broker-#
-DNS.2=broker-#-external
-DNS.3=localhost
+DNS.1=client
+DNS.2=localhost
