@@ -16,5 +16,8 @@ test -e "$CA_DIR" || ./create-ca.sh "$CA_DIR"
 # Create keystore for the broker(s)
 ./create-brokers-keystore.sh "$NUM_BROKERS" "$PASSWORD" "$OUTPUT_DIR" "$CA_DIR"
 
+# Create keystore for the client
+./create-client-keystore.sh "$PASSWORD" "$OUTPUT_DIR" "$CA_DIR"
+
 # Create the truststore for the client and broker(s)
 ./create-client-brokers-truststore.sh "$NUM_BROKERS" "$PASSWORD" "$OUTPUT_DIR" "$CA_DIR"

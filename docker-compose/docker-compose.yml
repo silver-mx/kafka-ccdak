@@ -26,10 +26,10 @@ services:
       KAFKA_SSL_KEYSTORE_FILENAME: keystore-broker-1.pkcs12
       KAFKA_SSL_KEYSTORE_CREDENTIALS: keystore-creds-broker-1
       KAFKA_SSL_KEY_CREDENTIALS: sslkey-creds-broker-1
-      #KAFKA_SSL_TRUSTSTORE_FILENAME: truststore-broker-1.pkcs12
-      #KAFKA_SSL_TRUSTSTORE_CREDENTIALS: truststore-creds-broker-1
+      KAFKA_SSL_TRUSTSTORE_FILENAME: truststore-broker-1.pkcs12
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: truststore-creds-broker-1
       KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "HTTPS"
-      #KAFKA_SSL_CLIENT_AUTH: "required"
+      KAFKA_SSL_CLIENT_AUTH: "required"
       # ======> END TLS STUFF
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0

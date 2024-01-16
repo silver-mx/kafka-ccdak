@@ -2,7 +2,7 @@
 
 # This script will generate certificates for the given number of brokers and set the given password.
 # The script is adapted from https://github.com/confluentinc/learn-kafka-courses/blob/main/fund-kafka-security/scripts/keystore-create-kafka-2-3.sh
-# Call it as "./create-brokers-keystores.sh numBrokers password output-dir ca-dir"
+# Call it as "./create-brokers-keystore.sh numBrokers password output-dir ca-dir"
 # Example "./create-brokers-keystore.sh 1 pass123 ./../../tls-certs ./../../tls-certs/ca"
 
 WORKING_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -23,7 +23,7 @@ do
   # Create the output folder
   mkdir "$OUTPUT_DIR"
 
-  # Generate and copy broker cnf file
+  # Generate and copy broker.cnf file
   cp "$WORKING_DIR/broker-cfg/broker.cnf" "$OUTPUT_DIR"
   sed -i -e "s\broker-#\\$BROKER\g" "$OUTPUT_DIR/broker.cnf"
   mv "$OUTPUT_DIR/broker.cnf" "$OUTPUT_DIR/$BROKER.cnf"
