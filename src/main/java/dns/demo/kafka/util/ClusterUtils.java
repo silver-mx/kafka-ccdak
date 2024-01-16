@@ -15,14 +15,14 @@ public class ClusterUtils {
 
     public static String getClientTruststorePath() {
         File truststore = new File(requireNonNull(ClusterUtils.class.getClassLoader()
-                .getResource("tls-certs/client/kafka.client-truststore.pkcs12"))
+                .getResource("tls-certs/client/truststore-client.pkcs12"))
                 .getFile());
         return truststore.getAbsolutePath();
     }
 
     public static String getClientTruststorePass() throws IOException {
         File truststorePass = new File(requireNonNull(ClusterUtils.class.getClassLoader()
-                .getResource("tls-certs/client/client_truststore_creds"))
+                .getResource("tls-certs/client/truststore-creds-client"))
                 .getFile());
         return Files.readString(truststorePass.toPath());
     }

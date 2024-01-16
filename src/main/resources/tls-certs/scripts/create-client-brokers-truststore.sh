@@ -13,7 +13,6 @@ function createTruststore() {
     DIR=$1
     TRUSTSTORE="$DIR/$2"
     ENTITY=$3
-    ALIAS="ca"
 
     # Delete the truststore if it already exists
     test -e "$TRUSTSTORE" && rm "$TRUSTSTORE"
@@ -25,7 +24,7 @@ function createTruststore() {
        -storetype PKCS12 \
        -keystore "$TRUSTSTORE" \
        -storepass "$PASSWORD" \
-       -alias "$ALIAS" \
+       -alias "ca" \
        -file "$CA_DIR/ca.pem" \
        -noprompt
 
@@ -38,13 +37,13 @@ function createTruststore() {
        -storepass "$PASSWORD"
 
       # Save creds
-      echo "$PASSWORD" > "$DIR/${ENTITY}_truststore_creds"
+      echo "$PASSWORD" > "$DIR/truststore-creds-${ENTITY}"
 }
 
 # Create the truststore for the client, including the dir if it does not exist
 CLIENT_DIR="$TLS_CERTS_OUTPUT_DIR/client"
 test -e "$CLIENT_DIR" || mkdir "$CLIENT_DIR"
-createTruststore "$CLIENT_DIR" "kafka.client-truststore.pkcs12" "client"
+createTruststore "$CLIENT_DIR" "truststore-client.pkcs12" "client"
 
 
 # Create the truststore for each broker
@@ -52,5 +51,5 @@ for i in $BROKER_ID_LST
 do
   BROKER="broker-$i"
   OUTPUT_DIR="$TLS_CERTS_OUTPUT_DIR/$BROKER"
-  createTruststore "$OUTPUT_DIR" "kafka.$BROKER-truststore.pkcs12" "$BROKER"
+  createTruststore "$OUTPUT_DIR" "truststore-$BROKER.pkcs12" "$BROKER"
 done

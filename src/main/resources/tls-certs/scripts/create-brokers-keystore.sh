@@ -15,6 +15,7 @@ for i in $BROKER_ID_LST
 do
   BROKER="broker-$i"
   OUTPUT_DIR="$TLS_CERTS_OUTPUT_DIR/$BROKER"
+  KEYSTORE="$OUTPUT_DIR/keystore-$BROKER.pkcs12"
 
   # First delete the output folder if it exists
   test "$OUTPUT_DIR" && rm -rf "$OUTPUT_DIR"
@@ -64,22 +65,22 @@ do
     # Create a keystore for the broker and import the certificate
     keytool -importkeystore \
     -deststorepass "$PASSWORD" \
-    -destkeystore "$OUTPUT_DIR/kafka.$BROKER.keystore.pkcs12" \
+    -destkeystore "$KEYSTORE" \
     -srckeystore "$OUTPUT_DIR/$BROKER.p12" \
     -deststoretype PKCS12  \
     -srcstoretype PKCS12 \
     -noprompt \
     -srcstorepass "$PASSWORD"
 
-    echo "------------------------------- VERIFY KEYSTORE [$OUTPUT_DIR/kafka.$BROKER.keystore.pkcs12] -------------------------------"
+    echo "------------------------------- VERIFY KEYSTORE [$KEYSTORE] -------------------------------"
 
     # Verify the keystore
     keytool -list -v \
-        -keystore "$OUTPUT_DIR/kafka.$BROKER.keystore.pkcs12" \
+        -keystore "$KEYSTORE" \
         -storepass "$PASSWORD"
 
     # Save creds
-    echo "$PASSWORD" > "$OUTPUT_DIR/${BROKER}_sslkey_creds"
-    echo "$PASSWORD" > "$OUTPUT_DIR/${BROKER}_keystore_creds"
+    echo "$PASSWORD" > "$OUTPUT_DIR/sslkey-creds-${BROKER}"
+    echo "$PASSWORD" > "$OUTPUT_DIR/keystore-creds-${BROKER}"
 
 done
