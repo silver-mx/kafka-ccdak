@@ -29,3 +29,4 @@ subjectAltName = @alt_names
 DNS.1=broker-#
 DNS.2=broker-#-external
 DNS.3=localhost
+DNS.4=dell

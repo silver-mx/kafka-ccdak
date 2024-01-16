@@ -12,7 +12,7 @@ import static java.util.Objects.requireNonNull;
 
 public class ClusterUtils {
 
-    public static final String KAFKA_HOST_DEFAULT = "localhost";
+    public static final String KAFKA_HOST_DEFAULT = "dell";
     public static final int KAFKA_PORT_DEFAULT = 9092;
     public static final int KAFKA_TLS_PORT_DEFAULT = 29094;
     public static final int KAFKA_SCHEMA_REGISTRY_PORT_DEFAULT = 8081;
