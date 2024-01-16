@@ -5,10 +5,14 @@
 # Example "./create-all-certs.sh 1 pass123 ./../../tls-certs"
 
 #WORKING_DIR=$(cd "$(dirname "$0")" && pwd)
-NUM_BROKERS=$1
-PASSWORD=$2
-OUTPUT_DIR=$3
+NUM_BROKERS=$(test "$1" || echo "1")
+PASSWORD=$(test "$2" || echo "pass123")
+OUTPUT_DIR=$(test "$3" || echo "./../../tls-certs")
 CA_DIR="$OUTPUT_DIR/ca"
+
+echo "NUM_BROKERS=$NUM_BROKERS"
+echo "PASSWORD=$PASSWORD"
+echo "OUTPUT_DIR=$OUTPUT_DIR"
 
 # Create certificate authority (CA) if it does not exist
 test -e "$CA_DIR" || ./create-ca.sh "$CA_DIR"
