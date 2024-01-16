@@ -75,10 +75,10 @@ class SimpleProducerTest extends AbstractKafkaTest {
 
     @Test
     void produceLabExercise(EmbeddedKafkaBroker broker) throws IOException {
-        String inventoryPurchases = "inventory_purchases";
-        String applePurchases = "apple_purchases";
-        broker.addTopics(inventoryPurchases, applePurchases);
-
+        String inventoryPurchases = "inventory_purchases-p";
+        String applePurchases = "apple_purchases-p";
+        // Disable the creation of the topic as it seems to cause an error org.apache.kafka.common.errors.OutOfOrderSequenceException: Out of order sequence number for producer 1
+        //broker.addTopics(inventoryPurchases, applePurchases);
 
         List<ProducerRecord<String, String>> records = produceLabRecords(inventoryPurchases, applePurchases, broker);
 

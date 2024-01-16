@@ -79,7 +79,10 @@ class SimpleConsumerTest extends AbstractKafkaTest {
 
     @Test
     void consumerLabExercise(EmbeddedKafkaBroker broker) throws IOException {
-        List<String> topics = List.of("inventory_purchases", "apple_purchases");
+        List<String> topics = List.of("inventory_purchases-c", "apple_purchases-c");
+
+        // Disable the creation of the topic as it seems to cause an error org.apache.kafka.common.errors.OutOfOrderSequenceException: Out of order sequence number for producer 1
+        //broker.addTopics(topics.get(0), topics.get(1));
 
         List<ProducerRecord<String, String>> records = SimpleProducerTest.produceLabRecords(topics.get(0), topics.get(1), broker);
         Path tempFile = Files.createTempFile("output-data-", null);
