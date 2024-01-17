@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create a certificate authority (CA) and all certificates for the client and broker(s)
 # Call it as "./create-all-certs.sh [numBrokers] [password] [outputDir] [encryptedCA(true/false)]"

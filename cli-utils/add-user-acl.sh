@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Adds an ACL to allow certain users to read and write to a topic.
 # Usage: `./add-user-acl.sh [broker-host-port] [topic].

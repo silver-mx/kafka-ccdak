@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Creates a topic.
 # Usage: `./create-topic.sh  [broker-host-port] [topic] [partitions]`.

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Produces to a topic using a secure TLS connection if needed.
 # Usage: `./produce-tls.sh  [broker-host-port] [topic]`.

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create a certificate authority (CA) key and certificate
 # Call it as "./create-ca.sh [output-dir] [encryptionPassword]"

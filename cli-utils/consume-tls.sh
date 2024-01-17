@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Consumes from a topic using a secure TLS connection if needed.
 # Usage: `./consume-tls.sh  [broker-host-port] [topic]`.

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script will generate one or more truststores.
 # Call it as "./create-truststore.sh [numTrustores] [name] [caDir] [password] [outputDir]"
