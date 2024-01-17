@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Create a certificate authority (CA) key and certificate
-# Call it as "./create-ca.sh output-dir encryptionPassword"
+# Call it as "./create-ca.sh [output-dir] [encryptionPassword]"
 # Example "./create-ca.sh ./../../tls-certs/ca pass123"
 
 WORKING_DIR=$(cd "$(dirname "$0")" && pwd)

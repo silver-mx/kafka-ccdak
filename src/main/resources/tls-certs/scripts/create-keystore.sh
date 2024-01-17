@@ -2,7 +2,7 @@
 
 # This script will generate one or more keystores.
 # The script is adapted from https://github.com/confluentinc/learn-kafka-courses/blob/main/fund-kafka-security/scripts/keystore-create-kafka-2-3.sh
-# Call it as "./create-keystore.sh numKeystores name cfgFilePath caDir password outputDir"
+# Call it as "./create-keystore.sh [numKeystores] [name] [cfgFilePath] [caDir] [password] [outputDir]"
 # Example "./create-keystore.sh 1 broker ./client-server-cfg/config.cnf ./../../tls-certs/ca pass123 ./../../tls-certs"
 
 #WORKING_DIR=$(cd "$(dirname "$0")" && pwd)

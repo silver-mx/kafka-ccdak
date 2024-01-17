@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Create a certificate authority (CA) and all certificates for the client and broker(s)
-# Call it as "./create-all-certs.sh numBrokers password output-dir encryptedCA"
+# Call it as "./create-all-certs.sh [numBrokers] [password] [outputDir] [encryptedCA(true/false)]"
 # Example "./create-all-certs.sh 1 pass123 ./../../tls-certs false"
 
 #WORKING_DIR=$(cd "$(dirname "$0")" && pwd)

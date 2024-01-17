@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script will generate one or more truststores.
-# Call it as "./create-truststore.sh numKeystores name caDir password outputDir"
+# Call it as "./create-truststore.sh [numTrustores] [name] [caDir] [password] [outputDir]"
 # Example "./create-truststore.sh 1 broker ./../../tls-certs/ca pass123 ./../../tls-certs"
 
 #WORKING_DIR=$(cd "$(dirname "$0")" && pwd)
