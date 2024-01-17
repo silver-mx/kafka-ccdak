@@ -31,6 +31,21 @@ services:
       KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "HTTPS"
       KAFKA_SSL_CLIENT_AUTH: "required"
       # ======> END TLS STUFF
+      # ======> START ACL STUFF
+      # The class kafka.security.auth.SimpleAclAuthorizer is used prior to KRaft-based Kafka
+      # KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.auth.SimpleAclAuthorizer
+      KAFKA_AUTHORIZER_CLASS_NAME: org.apache.kafka.metadata.authorizer.StandardAuthorizer
+      # KAFKA_LOG4J_ROOT_LOGLEVEL: INFO
+      # Set logs for the ACL authorizer to INFO to see more detail
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=WARN,kafka.authorizer.logger=INFO"
+      # The User:ANONYMOUS is so the broker starts when KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND=false. TODO: Investigate why this is needed.
+      KAFKA_SUPER_USERS: User:admin
+      # In production KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND must be false to deny access when no ACL is available for a resource
+      # Right now with false it does not start WHY? TODO: Investigate
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: true
+      # Use the CN (common name) from the client certificate as username
+      KAFKA_SSL_PRINCIPAL_MAPPING_RULES: "RULE:^CN=(.*?),L=.*,O=.*,C=.*$/$1/,DEFAULT"
+      # ======> END ACL STUFF
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
