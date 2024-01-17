@@ -24,11 +24,11 @@ public class ClusterUtils {
 
 
     public static String getClientTruststorePath() {
-        return getAbsolutePath("tls-certs/client/truststore-client.pkcs12");
+        return getAbsolutePath("tls-certs/client-1/truststore-client-1.pkcs12");
     }
 
     public static String getClientKeystorePath() {
-        return getAbsolutePath("tls-certs/client/keystore-client.pkcs12");
+        return getAbsolutePath("tls-certs/client-1/keystore-client-1.pkcs12");
     }
 
     private static String getAbsolutePath(String path) {
@@ -38,15 +38,15 @@ public class ClusterUtils {
     }
 
     public static String getClientTruststoreCredentials() throws IOException {
-        return getCredentials("tls-certs/client/truststore-creds-client");
+        return getCredentials("tls-certs/client-1/truststore-creds-client-1");
     }
 
     public static String getClientKeystoreCredentials() throws IOException {
-        return getCredentials("tls-certs/client/keystore-creds-client");
+        return getCredentials("tls-certs/client-1/keystore-creds-client-1");
     }
 
     public static String getClientSslKeyCredentials() throws IOException {
-        return getCredentials("tls-certs/client/sslkey-creds-client");
+        return getCredentials("tls-certs/client-1/sslkey-creds-client-1");
     }
 
     private static String getCredentials(String path) throws IOException {
