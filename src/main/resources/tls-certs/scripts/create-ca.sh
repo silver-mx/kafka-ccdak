@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Create a certificate authority (CA) key and certificate
-# Call it as "./create-ca.sh output-dir encrypted"
-# Example "./create-ca.sh ./../../tls-certs/ca false"
+# Call it as "./create-ca.sh output-dir encryptionPassword"
+# Example "./create-ca.sh ./../../tls-certs/ca pass123"
 
 WORKING_DIR=$(cd "$(dirname "$0")" && pwd)
 CA_CFG_DIR="$WORKING_DIR/ca-cfg"
 CA_OUTPUT_DIR="$1"
-ENCRYPTED=$(test "$2" && echo "$2" || echo "false")
+ENCRYPTION_PASSWORD=$(test "$2" && echo "$2" || echo "")
 
 # Create output dir
 test -e "$CA_OUTPUT_DIR" && echo "CA FOLDER EXISTS, ABORTING..." && exit 1 || mkdir "$CA_OUTPUT_DIR"
@@ -16,13 +16,16 @@ test -e "$CA_OUTPUT_DIR" && echo "CA FOLDER EXISTS, ABORTING..." && exit 1 || mk
 cp "$CA_CFG_DIR/ca.cnf" "$CA_OUTPUT_DIR"
 
 # Generate a certificate authority (CA) key and certificate
-if [ "$ENCRYPTED" = "true" ]
+if [ "$ENCRYPTION_PASSWORD" != "" ]
 then
   echo "------------------------------- START GENERATING ENCRYPTED-CA [$CA_OUTPUT_DIR] -------------------------------"
   # NOTE: Encrypt using '-aes256'
+  # Ideally the pass phrase is provided in a protected file with param `-passout file:passphrase.txt`
+  # For testing we only use the received password
   openssl req -x509 \
    -aes256 \
    -config "$CA_OUTPUT_DIR/ca.cnf" \
+   -passout pass:"$ENCRYPTION_PASSWORD" \
    -newkey rsa:4096 \
    -sha512 \
    -keyout "$CA_OUTPUT_DIR/ca.key" \

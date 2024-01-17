@@ -43,6 +43,7 @@ do
     -config "$KEYSTORE_DIR/$NAME.cnf"
 
     # Sign the broker certificate with the CA
+    # NOTE: -passin pass:"$PASSWORD" provides the CA encryption password (if the CA is encrypted)
     openssl x509 -req \
     -sha512 \
     -days 3650 \
@@ -52,7 +53,8 @@ do
     -CAcreateserial \
     -out "$KEYSTORE_DIR/$NAME.crt" \
     -extfile "$KEYSTORE_DIR/$NAME.cnf" \
-    -extensions v3_req
+    -extensions v3_req \
+    -passin pass:"$PASSWORD"
 
     # .Convert the broker certificate over to pkcs12 format
     openssl pkcs12 -export \
@@ -62,7 +64,8 @@ do
     -CAfile "$CA_DIR/ca.pem" \
     -name "$NAME" \
     -out "$KEYSTORE_DIR/$NAME.p12" \
-    -password "pass:$PASSWORD"
+    -password pass:"$PASSWORD" \
+    -passin pass:"$PASSWORD"
 
     # Create a keystore for the broker and import the certificate
     keytool -importkeystore \

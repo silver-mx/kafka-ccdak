@@ -19,7 +19,8 @@ echo "CA_DIR=$CA_DIR"
 echo "CLIENT_SERVER_CFG=$CLIENT_SERVER_CFG"
 
 # Create certificate authority (CA) if it does not exist
-test -e "$CA_DIR" || ./create-ca.sh "$CA_DIR" "$ENCRYPTED"
+CA_ENCRYPTION_PASSPHRASE=$(test "$ENCRYPTED" = "true" && echo "$PASSWORD" || "")
+test -e "$CA_DIR" || ./create-ca.sh "$CA_DIR" "$CA_ENCRYPTION_PASSPHRASE"
 
 # Create keystore for the broker(s)
 ./create-keystore.sh "$NUM_BROKERS" "broker" "$CLIENT_SERVER_CFG" "$CA_DIR" "$PASSWORD" "$OUTPUT_DIR"
