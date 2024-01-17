@@ -38,11 +38,13 @@ services:
       # KAFKA_LOG4J_ROOT_LOGLEVEL: INFO
       # Set logs for the ACL authorizer to INFO to see more detail
       KAFKA_LOG4J_LOGGERS: "kafka.controller=WARN,kafka.authorizer.logger=INFO"
-      # The User:ANONYMOUS is so the broker starts when KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND=false. TODO: Investigate why this is needed.
-      KAFKA_SUPER_USERS: User:admin
       # In production KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND must be false to deny access when no ACL is available for a resource
-      # Right now with false it does not start WHY? TODO: Investigate
+      # Right now with "false" the broker does not start due to CLUSTER_AUTHORIZATION_FAILED, WHY?
+      # TODO: Investigate CLUSTER_AUTHORIZATION_FAILED (Dirty workaround: User:ANONYMOUS needs to be added to KAFKA_SUPER_USERS to start kafka)
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: true
+      # The User:ANONYMOUS is so the broker starts when KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND=false. TODO: Investigate why this is needed.
+      #KAFKA_SUPER_USERS: "User:admin;User:ANONYMOUS"
+      KAFKA_SUPER_USERS: "User:admin"
       # Use the CN (common name) from the client certificate as username
       KAFKA_SSL_PRINCIPAL_MAPPING_RULES: "RULE:^CN=(.*?),L=.*,O=.*,C=.*$/$1/,DEFAULT"
       # ======> END ACL STUFF
