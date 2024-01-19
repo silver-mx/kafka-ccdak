@@ -6,10 +6,7 @@ import dns.demo.kafka.util.MiscUtils;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.io.IOException;
@@ -96,16 +93,29 @@ public class SimpleProducer {
     public static Map<String, Object> getProducerProperties(String broker) {
         return Map.of(
                 BOOTSTRAP_SERVERS_CONFIG, broker,
-                // Do not retry (disabled because causes the tests to fail with NotLeaderOrFollowerException, maybe because som writes fail and cannot be retried)
-                //RETRIES_CONFIG, 0,
                 KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
-                VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+                VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
+
+                // PRODUCER TUNING
+
+                /* Using retries=0 causes the tests to fail with NotLeaderOrFollowerException, maybe because som writes
+                 fail and cannot be retried.
+                 */
+                RETRIES_CONFIG, 3,
+                ACKS_CONFIG, "all",
+                ENABLE_IDEMPOTENCE_CONFIG, true, // Default
+                /* Allowing retries while setting enable.idempotence to false and max.in.flight.requests.per.connection
+                 to greater than 1 will potentially change the ordering of records because if two batches are sent to a
+                 single partition, and the first fails and is retried but the second succeeds, then the records in the
+                 second batch may appear first.*/
+                MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1, // Default (5).
+                BATCH_SIZE_CONFIG, 65536 // Default 16384
+        );
     }
 
     public static Map<String, Object> getProducerExtendedProperties(String broker) {
         Map<String, Object> producerProperties = new HashMap<>(getProducerProperties(broker));
         producerProperties.putAll(Map.of(
-                ACKS_CONFIG, "all",
                 BUFFER_MEMORY_CONFIG, "12582912",
                 CONNECTIONS_MAX_IDLE_MS_CONFIG, "300000"));
 

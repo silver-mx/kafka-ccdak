@@ -84,9 +84,19 @@ public class SimpleConsumer {
                 GROUP_ID_CONFIG, "simple-java-consumer-group" + UUID.randomUUID(),
                 ENABLE_AUTO_COMMIT_CONFIG, true,
                 AUTO_COMMIT_INTERVAL_MS_CONFIG, 1000,
-                AUTO_OFFSET_RESET_CONFIG, "earliest", //From the beginning
                 KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName(),
-                VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()
+                VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName(),
+
+                // CONSUMER TUNING
+
+                // Wait until the consumer can fetch at least 128 bytes or the time elapses
+                FETCH_MIN_BYTES_CONFIG, 128, // Default 1 byte
+                /* Send heartbeats more often to help the consumer coordinator to decide if rebalancing (when consumers
+                join or leave the group) is required, and which consumers are alive
+                */
+                HEARTBEAT_INTERVAL_MS_CONFIG, 2000, // Default 3000ms
+                // Consumer without offset will start from the beginning
+                AUTO_OFFSET_RESET_CONFIG, "earliest" // Default latest
         );
     }
 
