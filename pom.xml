@@ -23,6 +23,7 @@
         <schemaRegistryBasicAuthUserInfo></schemaRegistryBasicAuthUserInfo>
         <!--See example at https://github.com/confluentinc/examples/blob/7.5.0-post/clients/avro/pom.xml-->
         <io.confluent.schema-registry.version>7.5.0</io.confluent.schema-registry.version>
+        <ksqldb.version>0.29.0</ksqldb.version>
     </properties>
 
     <repositories>
@@ -31,12 +32,21 @@
             <name>Confluent</name>
             <url>https://packages.confluent.io/maven/</url>
         </repository>
+        <repository>
+            <id>ksqlDB</id>
+            <name>ksqlDB</name>
+            <url>https://ksqldb-maven.s3.amazonaws.com/maven/</url>
+        </repository>
     </repositories>
 
     <pluginRepositories>
         <pluginRepository>
             <id>confluent</id>
             <url>https://packages.confluent.io/maven/</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>ksqlDB</id>
+            <url>https://ksqldb-maven.s3.amazonaws.com/maven/</url>
         </pluginRepository>
     </pluginRepositories>
 
@@ -72,6 +82,12 @@
             <groupId>io.confluent</groupId>
             <artifactId>kafka-avro-serializer</artifactId>
             <version>${io.confluent.schema-registry.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.confluent.ksql</groupId>
+            <artifactId>ksqldb-api-client</artifactId>
+            <version>${ksqldb.version}</version>
+            <classifier>with-dependencies</classifier>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

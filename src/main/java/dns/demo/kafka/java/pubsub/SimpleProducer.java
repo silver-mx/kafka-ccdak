@@ -2,6 +2,8 @@ package dns.demo.kafka.java.pubsub;
 
 import dns.demo.kafka.domain.Person;
 import dns.demo.kafka.domain.Purchase;
+import dns.demo.kafka.java.ksql.QueryStream;
+import dns.demo.kafka.util.ClusterUtils;
 import dns.demo.kafka.util.MiscUtils;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
@@ -16,6 +18,7 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static dns.demo.kafka.java.ksql.QueryStream.MEMBER_SIGNUPS_TOPIC;
 import static dns.demo.kafka.util.ClusterUtils.*;
 import static java.util.Objects.nonNull;
 import static org.apache.kafka.clients.producer.ProducerConfig.*;
@@ -166,6 +169,14 @@ public class SimpleProducer {
                             log.info("Published message: topic={} partition={} offset={}",
                                     metadata.topic(), metadata.partition(), metadata.offset())
                     );
+        } else if (args[0].equals("--for-ksql-demo")) {
+            ClusterUtils.createTopic(List.of(MEMBER_SIGNUPS_TOPIC));
+            List<ProducerRecord<String, String>> producerRecords = IntStream.range(0, 100)
+                    .mapToObj(i -> {
+                        String value = String.format("lastname-%d,name-%d,%b", i, i, (i % 2 == 0));
+                        return new ProducerRecord<>(MEMBER_SIGNUPS_TOPIC, String.valueOf(i), value);
+                    }).toList();
+            produce(producerRecords, getProducerExtendedProperties(getBroker()));
         }
     }
 

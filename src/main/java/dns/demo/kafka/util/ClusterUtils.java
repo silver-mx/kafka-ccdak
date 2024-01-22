@@ -1,12 +1,14 @@
 package dns.demo.kafka.util;
 
 import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.NewTopic;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -21,7 +23,8 @@ public class ClusterUtils {
     public static final String KAFKA_HOST_PORT_DEFAULT = String.format("%s:%d", KAFKA_HOST_DEFAULT, KAFKA_PORT_DEFAULT);
     public static final String KAFKA_TLS_HOST_PORT_DEFAULT = String.format("%s:%d", KAFKA_HOST_DEFAULT, KAFKA_TLS_PORT_DEFAULT);
     public static final String KAFKA_SCHEMA_REGISTRY_URL_DEFAULT = String.format("http://%s:%d", KAFKA_HOST_DEFAULT, KAFKA_SCHEMA_REGISTRY_PORT_DEFAULT);
-
+    public static String KSQLDB_SERVER_HOST = KAFKA_HOST_DEFAULT;
+    public static int KSQLDB_SERVER_HOST_PORT = 8088;
 
     public static String getClientTruststorePath() {
         return getAbsolutePath("tls-certs/client-1/truststore-client-1.pkcs12");
@@ -73,5 +76,10 @@ public class ClusterUtils {
 
     public static AdminClient getAdminClient() {
         return AdminClient.create(getAdminClientProperties());
+    }
+
+    public static void createTopic(List<String> topics) {
+        List<NewTopic> newTopics = topics.stream().map(name -> new NewTopic(name, 2, (short) 1)).toList();
+        getAdminClient().createTopics(newTopics);
     }
 }
