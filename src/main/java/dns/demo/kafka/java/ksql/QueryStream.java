@@ -4,6 +4,7 @@ import dns.demo.kafka.util.ClusterUtils;
 import io.confluent.ksql.api.client.*;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -75,17 +76,28 @@ public class QueryStream {
         dropStream(client, MEMBER_SIGNUPS_STREAM, ksqlStreams);
     }
 
-    private static void createStream(Client client, String sql, String streamName) throws InterruptedException, ExecutionException {
+    private static void createStream(Client client, String sql, String streamName) {
         Map<String, Object> properties = Collections.singletonMap("auto.offset.reset", "earliest");
-        ExecuteStatementResult result = client.executeStatement(sql, properties).get();
-        log.info("Result create stream {} {}", streamName, result.queryId());
+        try {
+            ExecuteStatementResult result = client.executeStatement(sql, properties).get();
+            log.info("Result create stream {} {}", streamName, result.queryId());
+        } catch (Exception e) {
+            client.close();
+            log.error("Error creating stream[{}]", streamName, e);
+            throw new RuntimeException(e);
+        }
     }
 
-    private static void dropStream(Client client, String streamName, Map<String, List<StreamInfo>> ksqlStreams)
-            throws InterruptedException, ExecutionException {
+    private static void dropStream(Client client, String streamName, Map<String, List<StreamInfo>> ksqlStreams) {
         if (ksqlStreams.containsKey(streamName.toUpperCase())) {
-            ExecuteStatementResult result = client.executeStatement("DROP STREAM IF EXISTS " + streamName + ";").get();
-            log.info("Result drop stream {} {}", streamName, result.queryId());
+            try {
+                ExecuteStatementResult result = client.executeStatement("DROP STREAM IF EXISTS " + streamName + ";").get();
+                log.info("Result drop stream {} {}", streamName, result.queryId());
+            } catch (Exception e) {
+                client.close();
+                log.error("Error dropping stream[{}]", streamName, e);
+                throw new RuntimeException(e);
+            }
         } else {
             log.info("Stream {} does not exist yet, it won't be dropped ...", streamName);
         }
@@ -103,8 +115,22 @@ public class QueryStream {
 
         // Synchronous execution (there is an asynchronous version as well)
         StreamedQueryResult streamedQueryResult = client.streamQuery(sql, properties).get();
-        // Terminate any open connections and close the client inside the subscriber
-        streamedQueryResult.subscribe(new RowSubscriber(client));
+
+        int fetchedRecords = expectedRecords;
+        Row row;
+        do {
+            // Block until a new row is available
+            row = streamedQueryResult.poll();
+            if (nonNull(row)) {
+                fetchedRecords--;
+                log.info("Received a row {}", row.values());
+            } else {
+                log.info("Query has ended.");
+            }
+        } while (fetchedRecords > 0);
+
+        // Terminate any open connections and close the client
+        client.close();
     }
 
     public static void executeQueryAsync(String sql) throws ExecutionException, InterruptedException {
@@ -130,11 +156,11 @@ public class QueryStream {
         });
     }
 
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
+    public static void main(String[] args) throws ExecutionException, InterruptedException, IOException {
         if (args[0].equals("--with-ksql-stream-query")) {
             // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
             String sql = "SELECT * FROM " + MEMBER_SIGNUPS_EMAIL_STREAM + ";";
-            executeQuerySync(sql, EXPECTED_RECORDS);
+            executeQuerySync(sql, 3);
         } else if (args[0].equals("--with-ksql-join-stream-query")) {
             // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
             String sql = "SELECT * FROM " + MEMBER_EMAIL_LIST_STREAM + ";";
