@@ -1,6 +1,8 @@
 package dns.demo.kafka.util;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.ListTopicsOptions;
 import org.apache.kafka.clients.admin.NewTopic;
 
 import java.io.File;
@@ -11,9 +13,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
+@Slf4j
 public class ClusterUtils {
 
     public static final String KAFKA_HOST_DEFAULT = "localhost";
@@ -78,8 +83,38 @@ public class ClusterUtils {
         return AdminClient.create(getAdminClientProperties());
     }
 
-    public static void createTopic(List<String> topics) {
+    public static void deleteAndCreateTopics(List<String> topics) {
+        deleteTopics(topics);
         List<NewTopic> newTopics = topics.stream().map(name -> new NewTopic(name, 2, (short) 1)).toList();
-        getAdminClient().createTopics(newTopics);
+        try {
+            getAdminClient().createTopics(newTopics).all().get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void deleteTopics(List<String> topics) {
+        Set<String> existingTopics = getExistingTopics(topics);
+        if (!existingTopics.isEmpty()) {
+            try {
+                getAdminClient().deleteTopics(existingTopics).all();
+                log.info("The topics {} have been deleted...", existingTopics);
+            } catch (Exception e) {
+                throw new RuntimeException("Error deleting topic", e);
+            }
+        }
+    }
+
+    public static Set<String> getExistingTopics(List<String> topics) {
+        try {
+            Set<String> topicsInCluster = getAdminClient().listTopics(
+                            new ListTopicsOptions().listInternal(false))
+                    .names().get();
+            return topicsInCluster.stream()
+                    .filter(t -> topics.stream().anyMatch(topic -> topic.equalsIgnoreCase(t)))
+                    .collect(toSet());
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching topic description", e);
+        }
     }
 }
