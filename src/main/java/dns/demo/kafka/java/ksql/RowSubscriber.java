@@ -31,8 +31,7 @@ public class RowSubscriber implements Subscriber<Row> {
 
     @Override
     public synchronized void onNext(Row row) {
-        log.info("Received a row!");
-        log.info("Row: {}", row.values());
+        log.info("Received a row: {}", row.values());
 
         // Request the next row
         subscription.request(1);

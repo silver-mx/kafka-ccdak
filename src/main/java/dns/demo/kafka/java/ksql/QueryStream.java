@@ -101,27 +101,10 @@ public class QueryStream {
 
         log.info("Executing \"{}\"", sql);
 
-        // Wait a bit, otherwise the query does not find any record.
-        Thread.sleep(1000);
-
         // Synchronous execution (there is an asynchronous version as well)
         StreamedQueryResult streamedQueryResult = client.streamQuery(sql, properties).get();
-
-        int fetchedRecords = expectedRecords;
-        Row row;
-        do {
-            // Block until a new row is available
-            row = streamedQueryResult.poll();
-            if (nonNull(row)) {
-                fetchedRecords--;
-                log.info("Received a row {}", row.values());
-            } else {
-                log.info("Query has ended.");
-            }
-        } while (fetchedRecords > 0);
-
-        // Terminate any open connections and close the client
-        client.close();
+        // Terminate any open connections and close the client inside the subscriber
+        streamedQueryResult.subscribe(new RowSubscriber(client));
     }
 
     public static void executeQueryAsync(String sql) throws ExecutionException, InterruptedException {
