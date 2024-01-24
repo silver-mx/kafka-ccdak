@@ -46,7 +46,7 @@ public class QueryStream {
 
         String createStreamSql = """
                 CREATE STREAM %s
-                    (id STRING KEY, firstname VARCHAR, lastname VARCHAR, email_notifications BOOLEAN)
+                    (id STRING KEY, firstname STRING, lastname STRING, email_notifications BOOLEAN)
                 WITH (KAFKA_TOPIC='%s', VALUE_FORMAT='DELIMITED');
                 """.formatted(MEMBER_SIGNUPS_STREAM, MEMBER_SIGNUPS_TOPIC);
         createStream(client, createStreamSql, MEMBER_SIGNUPS_STREAM);
@@ -55,7 +55,7 @@ public class QueryStream {
         createStream(client, createStreamSql, MEMBER_SIGNUPS_EMAIL_STREAM);
 
         createStreamSql = """
-                CREATE STREAM %s (id STRING KEY, email VARCHAR)
+                CREATE STREAM %s (id STRING KEY, email STRING)
                   WITH(KAFKA_TOPIC = '%s', VALUE_FORMAT = 'DELIMITED');
                 """.formatted(MEMBER_CONTACT_STREAM, MEMBER_CONTACT_TOPIC);
         createStream(client, createStreamSql, MEMBER_CONTACT_STREAM);
