@@ -1,6 +1,5 @@
 package dns.demo.kafka.java.ksql;
 
-import io.confluent.ksql.api.client.Client;
 import io.confluent.ksql.api.client.Row;
 import io.confluent.shaded.org.reactivestreams.Subscriber;
 import io.confluent.shaded.org.reactivestreams.Subscription;
@@ -14,10 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 public class RowSubscriber implements Subscriber<Row> {
 
     private Subscription subscription;
-    private final Client client;
 
-    public RowSubscriber(Client client) {
-        this.client = client;
+    public RowSubscriber() {
     }
 
     @Override
@@ -45,6 +42,5 @@ public class RowSubscriber implements Subscriber<Row> {
     @Override
     public synchronized void onComplete() {
         log.info("Query has ended.");
-        client.close();
     }
 }

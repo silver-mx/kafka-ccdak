@@ -5,15 +5,20 @@ import io.confluent.ksql.api.client.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static dns.demo.kafka.util.ClusterUtils.KSQLDB_SERVER_HOST;
 import static dns.demo.kafka.util.ClusterUtils.KSQLDB_SERVER_HOST_PORT;
 import static java.util.Objects.nonNull;
-import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toMap;
 
 @Slf4j
 public class QueryStream {
@@ -35,7 +40,7 @@ public class QueryStream {
                 .setPort(KSQLDB_SERVER_HOST_PORT);
     }
 
-    public static void createStreams(Client client) throws ExecutionException, InterruptedException {
+    public static void createStreams(Client client) {
 
         String createStreamSql = """
                 CREATE STREAM %s
@@ -44,8 +49,7 @@ public class QueryStream {
                 """.formatted(MEMBER_SIGNUPS_STREAM, MEMBER_SIGNUPS_TOPIC);
         createStream(client, createStreamSql, MEMBER_SIGNUPS_STREAM);
 
-        createStreamSql = String.format("CREATE STREAM %s AS SELECT * FROM %s WHERE email_notifications=true;",
-                MEMBER_SIGNUPS_EMAIL_STREAM, MEMBER_SIGNUPS_STREAM);
+        createStreamSql = String.format("CREATE STREAM %s AS SELECT * FROM %s WHERE email_notifications=true;", MEMBER_SIGNUPS_EMAIL_STREAM, MEMBER_SIGNUPS_STREAM);
         createStream(client, createStreamSql, MEMBER_SIGNUPS_EMAIL_STREAM);
 
         createStreamSql = """
@@ -64,16 +68,15 @@ public class QueryStream {
     }
 
     private static void dropStreams(Client client) throws InterruptedException, ExecutionException {
-        Map<String, List<StreamInfo>> ksqlStreams = client.listStreams()
-                .get()
-                .stream()
-                .collect(groupingBy(StreamInfo::getName));
+        Set<String> existingStreams = client.listStreams().get().stream()
+                .collect(toMap(StreamInfo::getName, Function.identity()))
+                .keySet();
 
         // Drop necessary streams in the correct order
-        dropStream(client, MEMBER_EMAIL_LIST_STREAM, ksqlStreams);
-        dropStream(client, MEMBER_CONTACT_STREAM, ksqlStreams);
-        dropStream(client, MEMBER_SIGNUPS_EMAIL_STREAM, ksqlStreams);
-        dropStream(client, MEMBER_SIGNUPS_STREAM, ksqlStreams);
+        dropStream(client, MEMBER_EMAIL_LIST_STREAM, existingStreams);
+        dropStream(client, MEMBER_CONTACT_STREAM, existingStreams);
+        dropStream(client, MEMBER_SIGNUPS_EMAIL_STREAM, existingStreams);
+        dropStream(client, MEMBER_SIGNUPS_STREAM, existingStreams);
     }
 
     private static void createStream(Client client, String sql, String streamName) {
@@ -88,10 +91,11 @@ public class QueryStream {
         }
     }
 
-    private static void dropStream(Client client, String streamName, Map<String, List<StreamInfo>> ksqlStreams) {
-        if (ksqlStreams.containsKey(streamName.toUpperCase())) {
+    private static void dropStream(Client client, String streamName, Set<String> existingStreams) {
+        if (existingStreams.contains(streamName.toUpperCase())) {
             try {
-                ExecuteStatementResult result = client.executeStatement("DROP STREAM IF EXISTS " + streamName + ";").get();
+                ExecuteStatementResult result = client.executeStatement("DROP STREAM IF EXISTS " + streamName + ";")
+                        .get();
                 log.info("Result drop stream {} {}", streamName, result.queryId());
             } catch (Exception e) {
                 client.close();
@@ -103,68 +107,65 @@ public class QueryStream {
         }
     }
 
-    public static void executeQuerySync(String sql, int expectedRecords) throws ExecutionException, InterruptedException {
-        Client client = Client.create(getClientOptions());
+    public static void executeQuerySync(Client client, String sql) throws ExecutionException, InterruptedException {
         Map<String, Object> properties = Collections.singletonMap("auto.offset.reset", "earliest");
 
-        ClusterUtils.deleteTopics(List.of(MEMBER_EMAIL_LIST_STREAM, MEMBER_SIGNUPS_EMAIL_STREAM));
-        dropStreams(client);
-        createStreams(client);
-
-        log.info("Executing \"{}\"", sql);
+        log.info("Executing SQL \"{}\"", sql);
 
         // Synchronous execution (there is an asynchronous version as well)
         StreamedQueryResult streamedQueryResult = client.streamQuery(sql, properties).get();
 
-        int fetchedRecords = expectedRecords;
         Row row;
         do {
             // Block until a new row is available
             row = streamedQueryResult.poll();
             if (nonNull(row)) {
-                fetchedRecords--;
                 log.info("Received a row {}", row.values());
             } else {
                 log.info("Query has ended.");
             }
-        } while (fetchedRecords > 0);
+        } while (nonNull(row));
 
         // Terminate any open connections and close the client
         client.close();
     }
 
-    public static void executeQueryAsync(String sql) throws ExecutionException, InterruptedException {
-        Client client = Client.create(getClientOptions());
+    public static void executeQueryAsync(Client client, String sql) {
         Map<String, Object> properties = Collections.singletonMap("auto.offset.reset", "earliest");
+
+        log.info("Executing SQL \"{}\"", sql);
+
+        client.streamQuery(sql, properties)
+                .thenAccept(streamedQueryResult -> {
+                    log.info("Query has started. Query ID: {}", streamedQueryResult.queryID());
+                    RowSubscriber subscriber = new RowSubscriber();
+                    streamedQueryResult.subscribe(subscriber);
+                }).exceptionally(e -> {
+                    log.error("Request failed", e);
+                    return null;
+                });
+    }
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException, IOException {
+        Client client = Client.create(getClientOptions());
 
         ClusterUtils.deleteTopics(List.of(MEMBER_EMAIL_LIST_STREAM, MEMBER_SIGNUPS_EMAIL_STREAM));
         dropStreams(client);
         createStreams(client);
 
-        log.info("Executing \"{}\"", sql);
+        // Seems to be necessary for the stream to work correctly.
+        Thread.sleep(Duration.ofSeconds(1));
 
-        Thread.sleep(1000);
-
-        client.streamQuery(sql, properties).thenAccept(streamedQueryResult -> {
-            log.info("Query has started. Query ID: {}", streamedQueryResult.queryID());
-            // Terminate the client connection inside RowSubscriber
-            RowSubscriber subscriber = new RowSubscriber(client);
-            streamedQueryResult.subscribe(subscriber);
-        }).exceptionally(e -> {
-            log.error("Request failed", e);
-            return null;
-        });
-    }
-
-    public static void main(String[] args) throws ExecutionException, InterruptedException, IOException {
         if (args[0].equals("--with-ksql-stream-query")) {
             // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
             String sql = "SELECT * FROM " + MEMBER_SIGNUPS_EMAIL_STREAM + ";";
-            executeQuerySync(sql, 3);
+            executeQuerySync(client, sql);
+            client.close();
         } else if (args[0].equals("--with-ksql-join-stream-query")) {
             // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
             String sql = "SELECT * FROM " + MEMBER_EMAIL_LIST_STREAM + ";";
-            executeQueryAsync(sql);
+            executeQueryAsync(client, sql);
+            CompletableFuture.delayedExecutor(2, TimeUnit.SECONDS).execute(client::close);
         }
     }
 }
