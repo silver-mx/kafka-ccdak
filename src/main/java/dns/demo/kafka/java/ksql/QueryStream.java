@@ -42,9 +42,11 @@ public class QueryStream {
 
     public static void createStreams(Client client) {
 
+        // NOTE: The use of KEY/ROWKEY is described here: https://docs.ksqldb.io/en/latest/operate-and-deploy/installation/upgrading/#withkey-syntax-removed
+
         String createStreamSql = """
                 CREATE STREAM %s
-                    (ROWKEY STRING KEY, firstname VARCHAR, lastname VARCHAR, email_notifications BOOLEAN)
+                    (id STRING KEY, firstname VARCHAR, lastname VARCHAR, email_notifications BOOLEAN)
                 WITH (KAFKA_TOPIC='%s', VALUE_FORMAT='DELIMITED');
                 """.formatted(MEMBER_SIGNUPS_STREAM, MEMBER_SIGNUPS_TOPIC);
         createStream(client, createStreamSql, MEMBER_SIGNUPS_STREAM);
@@ -53,16 +55,16 @@ public class QueryStream {
         createStream(client, createStreamSql, MEMBER_SIGNUPS_EMAIL_STREAM);
 
         createStreamSql = """
-                CREATE STREAM %s (ROWKEY STRING KEY, email VARCHAR)
+                CREATE STREAM %s (id STRING KEY, email VARCHAR)
                   WITH(KAFKA_TOPIC = '%s', VALUE_FORMAT = 'DELIMITED');
                 """.formatted(MEMBER_CONTACT_STREAM, MEMBER_CONTACT_TOPIC);
         createStream(client, createStreamSql, MEMBER_CONTACT_STREAM);
 
         createStreamSql = """
                 CREATE STREAM %s AS
-                    SELECT ms.ROWKEY, ms.firstname, ms.lastname, mc.email
+                    SELECT ms.id, ms.firstname, ms.lastname, mc.email
                     FROM %s AS ms
-                    INNER JOIN %s AS mc WITHIN 365 DAYS ON ms.ROWKEY = mc.ROWKEY;
+                    INNER JOIN %s AS mc WITHIN 365 DAYS ON ms.id = mc.id;
                 """.formatted(MEMBER_EMAIL_LIST_STREAM, MEMBER_SIGNUPS_STREAM, MEMBER_CONTACT_STREAM);
         createStream(client, createStreamSql, MEMBER_EMAIL_LIST_STREAM);
     }
