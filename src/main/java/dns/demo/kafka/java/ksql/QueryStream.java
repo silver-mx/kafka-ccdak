@@ -23,14 +23,20 @@ import static java.util.stream.Collectors.toMap;
 @Slf4j
 public class QueryStream {
 
+    public static final String TABLE_POSTFIX = "_table";
+
     public static final String MEMBER_CONTACT_TOPIC = "member_contact";
     public static final String MEMBER_SIGNUPS_TOPIC = "member_signups";
 
     public static final String MEMBER_SIGNUPS_STREAM = MEMBER_SIGNUPS_TOPIC;
+    public static final String MEMBER_SIGNUPS_TABLE = MEMBER_SIGNUPS_TOPIC + TABLE_POSTFIX;
+    public static final String MEMBER_SIGNUPS_TABLE_QUERYABLE = "QUERYABLE_" + MEMBER_SIGNUPS_TOPIC + TABLE_POSTFIX;
     public static final String MEMBER_SIGNUPS_EMAIL_STREAM = "member_signups_email";
 
     public static final String MEMBER_CONTACT_STREAM = MEMBER_CONTACT_TOPIC;
     public static final String MEMBER_EMAIL_LIST_STREAM = "member_email_list";
+    public static final String MEMBER_EMAIL_LIST_TABLE = MEMBER_EMAIL_LIST_STREAM + TABLE_POSTFIX;
+
     public static final int EXPECTED_RECORDS = 5;
 
 
@@ -49,16 +55,16 @@ public class QueryStream {
                     (id STRING KEY, firstname STRING, lastname STRING, email_notifications BOOLEAN)
                 WITH (KAFKA_TOPIC='%s', VALUE_FORMAT='DELIMITED');
                 """.formatted(MEMBER_SIGNUPS_STREAM, MEMBER_SIGNUPS_TOPIC);
-        createStream(client, createStreamSql, MEMBER_SIGNUPS_STREAM);
+        createStreamOrTable(client, createStreamSql, MEMBER_SIGNUPS_STREAM);
 
         createStreamSql = String.format("CREATE STREAM %s AS SELECT * FROM %s WHERE email_notifications=true;", MEMBER_SIGNUPS_EMAIL_STREAM, MEMBER_SIGNUPS_STREAM);
-        createStream(client, createStreamSql, MEMBER_SIGNUPS_EMAIL_STREAM);
+        createStreamOrTable(client, createStreamSql, MEMBER_SIGNUPS_EMAIL_STREAM);
 
         createStreamSql = """
                 CREATE STREAM %s (id STRING KEY, email STRING)
                   WITH(KAFKA_TOPIC = '%s', VALUE_FORMAT = 'DELIMITED');
                 """.formatted(MEMBER_CONTACT_STREAM, MEMBER_CONTACT_TOPIC);
-        createStream(client, createStreamSql, MEMBER_CONTACT_STREAM);
+        createStreamOrTable(client, createStreamSql, MEMBER_CONTACT_STREAM);
 
         createStreamSql = """
                 CREATE STREAM %s AS
@@ -66,7 +72,31 @@ public class QueryStream {
                     FROM %s AS ms
                     INNER JOIN %s AS mc WITHIN 365 DAYS ON ms.id = mc.id;
                 """.formatted(MEMBER_EMAIL_LIST_STREAM, MEMBER_SIGNUPS_STREAM, MEMBER_CONTACT_STREAM);
-        createStream(client, createStreamSql, MEMBER_EMAIL_LIST_STREAM);
+        createStreamOrTable(client, createStreamSql, MEMBER_EMAIL_LIST_STREAM);
+    }
+
+    public static void createTables(Client client) {
+
+        // NOTE: The use of KEY/ROWKEY is described here: https://docs.ksqldb.io/en/latest/operate-and-deploy/installation/upgrading/#withkey-syntax-removed
+
+        String createTableSql = """
+                CREATE TABLE %s
+                    (id STRING PRIMARY KEY, firstname STRING, lastname STRING, email_notifications BOOLEAN)
+                WITH (KAFKA_TOPIC='%s', VALUE_FORMAT='DELIMITED');
+                """.formatted(MEMBER_SIGNUPS_TABLE, MEMBER_SIGNUPS_TOPIC);
+        createStreamOrTable(client, createTableSql, MEMBER_SIGNUPS_TABLE);
+
+        createTableSql = """
+                CREATE TABLE %s AS SELECT * FROM %s;
+                """.formatted(MEMBER_SIGNUPS_TABLE_QUERYABLE, MEMBER_SIGNUPS_TABLE);
+        createStreamOrTable(client, createTableSql, MEMBER_SIGNUPS_TABLE);
+
+
+        // It seems there is a bug (query hangs) - BUG: https://github.com/confluentinc/ksql/issues/8953
+        createTableSql = """
+                CREATE TABLE %s AS SELECT ms_id, COUNT(*) FROM %s GROUP BY ms_id;
+                """.formatted(MEMBER_EMAIL_LIST_TABLE, MEMBER_EMAIL_LIST_STREAM);
+        //createStreamOrTable(client, createTableSql, MEMBER_EMAIL_LIST_TABLE);
     }
 
     private static void dropStreams(Client client) throws InterruptedException, ExecutionException {
@@ -75,37 +105,50 @@ public class QueryStream {
                 .keySet();
 
         // Drop necessary streams in the correct order
-        dropStream(client, MEMBER_EMAIL_LIST_STREAM, existingStreams);
-        dropStream(client, MEMBER_CONTACT_STREAM, existingStreams);
-        dropStream(client, MEMBER_SIGNUPS_EMAIL_STREAM, existingStreams);
-        dropStream(client, MEMBER_SIGNUPS_STREAM, existingStreams);
+        dropStreamOrTable(client, MEMBER_EMAIL_LIST_STREAM, existingStreams);
+        dropStreamOrTable(client, MEMBER_CONTACT_STREAM, existingStreams);
+        dropStreamOrTable(client, MEMBER_SIGNUPS_EMAIL_STREAM, existingStreams);
+        dropStreamOrTable(client, MEMBER_SIGNUPS_STREAM, existingStreams);
     }
 
-    private static void createStream(Client client, String sql, String streamName) {
+    private static void dropTables(Client client) throws InterruptedException, ExecutionException {
+        Set<String> existingTables = client.listTables().get().stream()
+                .collect(toMap(TableInfo::getName, Function.identity()))
+                .keySet();
+
+        // Drop necessary streams in the correct order
+        dropStreamOrTable(client, MEMBER_EMAIL_LIST_TABLE, existingTables);
+        dropStreamOrTable(client, MEMBER_SIGNUPS_TABLE_QUERYABLE, existingTables);
+        dropStreamOrTable(client, MEMBER_SIGNUPS_TABLE, existingTables);
+    }
+
+    private static void createStreamOrTable(Client client, String sql, String name) {
+        String artifact = name.contains(TABLE_POSTFIX) ? "TABLE" : "STREAM";
         Map<String, Object> properties = Collections.singletonMap("auto.offset.reset", "earliest");
         try {
             ExecuteStatementResult result = client.executeStatement(sql, properties).get();
-            log.info("Result create stream {} {}", streamName, result.queryId());
+            log.info("Result create {} {} {}", artifact, name, result.queryId());
         } catch (Exception e) {
             client.close();
-            log.error("Error creating stream[{}]", streamName, e);
+            log.error("Error creating {}[{}]", artifact, name, e);
             throw new RuntimeException(e);
         }
     }
 
-    private static void dropStream(Client client, String streamName, Set<String> existingStreams) {
-        if (existingStreams.contains(streamName.toUpperCase())) {
+    private static void dropStreamOrTable(Client client, String name, Set<String> existingArtifacts) {
+        String artifact = name.contains(TABLE_POSTFIX) ? "TABLE" : "STREAM";
+        if (existingArtifacts.contains(name.toUpperCase())) {
             try {
-                ExecuteStatementResult result = client.executeStatement("DROP STREAM IF EXISTS " + streamName + ";")
+                ExecuteStatementResult result = client.executeStatement("DROP " + artifact + " IF EXISTS " + name + ";")
                         .get();
-                log.info("Result drop stream {} {}", streamName, result.queryId());
+                log.info("Result drop {} {} {}", artifact, name, result.queryId());
             } catch (Exception e) {
                 client.close();
-                log.error("Error dropping stream[{}]", streamName, e);
+                log.error("Error dropping {}[{}]", artifact, name, e);
                 throw new RuntimeException(e);
             }
         } else {
-            log.info("Stream {} does not exist yet, it won't be dropped ...", streamName);
+            log.info("{} {} does not exist yet, it won't be dropped ...", artifact, name);
         }
     }
 
@@ -128,8 +171,6 @@ public class QueryStream {
             }
         } while (nonNull(row));
 
-        // Terminate any open connections and close the client
-        client.close();
     }
 
     public static void executeQueryAsync(Client client, String sql) {
@@ -151,23 +192,30 @@ public class QueryStream {
     public static void main(String[] args) throws ExecutionException, InterruptedException, IOException {
         Client client = Client.create(getClientOptions());
 
-        ClusterUtils.deleteTopics(List.of(MEMBER_EMAIL_LIST_STREAM, MEMBER_SIGNUPS_EMAIL_STREAM));
-        dropStreams(client);
-        createStreams(client);
+        try {
+            ClusterUtils.deleteTopics(List.of(MEMBER_EMAIL_LIST_STREAM, MEMBER_SIGNUPS_EMAIL_STREAM));
+            dropTables(client);
+            dropStreams(client);
+            createStreams(client);
+            createTables(client);
 
-        // Seems to be necessary for the stream to work correctly.
-        Thread.sleep(Duration.ofSeconds(1));
+            // Seems to be necessary for the stream to work correctly.
+            Thread.sleep(Duration.ofSeconds(1));
 
-        if (args[0].equals("--with-ksql-stream-query")) {
-            // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
-            String sql = "SELECT * FROM " + MEMBER_SIGNUPS_EMAIL_STREAM + ";";
-            executeQuerySync(client, sql);
+            if (args[0].equals("--with-ksql-stream-query")) {
+                // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
+                String sql = "SELECT * FROM " + MEMBER_SIGNUPS_EMAIL_STREAM + ";";
+                executeQuerySync(client, "SELECT * FROM " + MEMBER_SIGNUPS_EMAIL_STREAM + ";");
+                executeQuerySync(client, "SELECT * FROM " + MEMBER_SIGNUPS_TABLE_QUERYABLE + ";");
+                client.close();
+            } else if (args[0].equals("§")) {
+                // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
+                executeQueryAsync(client, "SELECT * FROM " + MEMBER_EMAIL_LIST_STREAM + ";");
+                //executeQueryAsync(client, "SELECT * FROM " + MEMBER_EMAIL_LIST_TABLE + ";");
+                CompletableFuture.delayedExecutor(2, TimeUnit.SECONDS).execute(client::close);
+            }
+        } catch (Exception e) {
             client.close();
-        } else if (args[0].equals("--with-ksql-join-stream-query")) {
-            // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
-            String sql = "SELECT * FROM " + MEMBER_EMAIL_LIST_STREAM + ";";
-            executeQueryAsync(client, sql);
-            CompletableFuture.delayedExecutor(2, TimeUnit.SECONDS).execute(client::close);
         }
     }
 }

@@ -179,7 +179,7 @@ public class SimpleProducer {
 
             List<ProducerRecord<String, String>> contactRecords = IntStream.range(0, EXPECTED_RECORDS)
                     .mapToObj(i -> {
-                        String value = String.format("name.lastname-%d@email.com", i);
+                        String value = String.format("name.lastname-new-%d@email.com", i);
                         return new ProducerRecord<>(MEMBER_CONTACT_TOPIC, String.valueOf(i), value);
                     }).toList();
             produce(contactRecords, getProducerExtendedProperties(getBroker()));
