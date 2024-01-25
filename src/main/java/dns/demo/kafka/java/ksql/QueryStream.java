@@ -1,8 +1,10 @@
 package dns.demo.kafka.java.ksql;
 
+import dns.demo.kafka.java.pubsub.SimpleConsumer;
 import dns.demo.kafka.util.ClusterUtils;
 import io.confluent.ksql.api.client.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.Validate;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -15,8 +17,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import static dns.demo.kafka.util.ClusterUtils.KSQLDB_SERVER_HOST;
-import static dns.demo.kafka.util.ClusterUtils.KSQLDB_SERVER_HOST_PORT;
+import static dns.demo.kafka.util.CleanResourcesUtil.dropStreamOrTable;
+import static dns.demo.kafka.util.ClusterUtils.getKSqlDbClientOptions;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toMap;
 
@@ -24,27 +26,22 @@ import static java.util.stream.Collectors.toMap;
 public class QueryStream {
 
     public static final String TABLE_POSTFIX = "_table";
+    public static final String STREAM_POSTFIX = "_stream";
 
     public static final String MEMBER_CONTACT_TOPIC = "member_contact";
     public static final String MEMBER_SIGNUPS_TOPIC = "member_signups";
 
-    public static final String MEMBER_SIGNUPS_STREAM = MEMBER_SIGNUPS_TOPIC;
+    public static final String MEMBER_SIGNUPS_STREAM = MEMBER_SIGNUPS_TOPIC + STREAM_POSTFIX;
     public static final String MEMBER_SIGNUPS_TABLE = MEMBER_SIGNUPS_TOPIC + TABLE_POSTFIX;
-    public static final String MEMBER_SIGNUPS_TABLE_QUERYABLE = "QUERYABLE_" + MEMBER_SIGNUPS_TOPIC + TABLE_POSTFIX;
-    public static final String MEMBER_SIGNUPS_EMAIL_STREAM = "member_signups_email";
+    public static final String MEMBER_SIGNUPS_TABLE_QUERYABLE = "queryable_" + MEMBER_SIGNUPS_TOPIC + TABLE_POSTFIX;
+    public static final String MEMBER_SIGNUPS_EMAIL_STREAM_QUERYABLE = "queryable_" + "member_signups_email" + STREAM_POSTFIX;
 
-    public static final String MEMBER_CONTACT_STREAM = MEMBER_CONTACT_TOPIC;
-    public static final String MEMBER_EMAIL_LIST_STREAM = "member_email_list";
+    public static final String MEMBER_CONTACT_STREAM = MEMBER_CONTACT_TOPIC + STREAM_POSTFIX;
+    public static final String MEMBER_EMAIL_LIST_STREAM = "member_email_list" + STREAM_POSTFIX;
     public static final String MEMBER_EMAIL_LIST_TABLE = MEMBER_EMAIL_LIST_STREAM + TABLE_POSTFIX;
 
     public static final int EXPECTED_RECORDS = 5;
 
-
-    public static ClientOptions getClientOptions() {
-        return ClientOptions.create()
-                .setHost(KSQLDB_SERVER_HOST)
-                .setPort(KSQLDB_SERVER_HOST_PORT);
-    }
 
     public static void createStreams(Client client) {
 
@@ -57,8 +54,8 @@ public class QueryStream {
                 """.formatted(MEMBER_SIGNUPS_STREAM, MEMBER_SIGNUPS_TOPIC);
         createStreamOrTable(client, createStreamSql, MEMBER_SIGNUPS_STREAM);
 
-        createStreamSql = String.format("CREATE STREAM %s AS SELECT * FROM %s WHERE email_notifications=true;", MEMBER_SIGNUPS_EMAIL_STREAM, MEMBER_SIGNUPS_STREAM);
-        createStreamOrTable(client, createStreamSql, MEMBER_SIGNUPS_EMAIL_STREAM);
+        createStreamSql = String.format("CREATE STREAM %s AS SELECT * FROM %s WHERE email_notifications=true;", MEMBER_SIGNUPS_EMAIL_STREAM_QUERYABLE, MEMBER_SIGNUPS_STREAM);
+        createStreamOrTable(client, createStreamSql, MEMBER_SIGNUPS_EMAIL_STREAM_QUERYABLE);
 
         createStreamSql = """
                 CREATE STREAM %s (id STRING KEY, email STRING)
@@ -107,7 +104,7 @@ public class QueryStream {
         // Drop necessary streams in the correct order
         dropStreamOrTable(client, MEMBER_EMAIL_LIST_STREAM, existingStreams);
         dropStreamOrTable(client, MEMBER_CONTACT_STREAM, existingStreams);
-        dropStreamOrTable(client, MEMBER_SIGNUPS_EMAIL_STREAM, existingStreams);
+        dropStreamOrTable(client, MEMBER_SIGNUPS_EMAIL_STREAM_QUERYABLE, existingStreams);
         dropStreamOrTable(client, MEMBER_SIGNUPS_STREAM, existingStreams);
     }
 
@@ -132,23 +129,6 @@ public class QueryStream {
             client.close();
             log.error("Error creating {}[{}]", artifact, name, e);
             throw new RuntimeException(e);
-        }
-    }
-
-    private static void dropStreamOrTable(Client client, String name, Set<String> existingArtifacts) {
-        String artifact = name.contains(TABLE_POSTFIX) ? "TABLE" : "STREAM";
-        if (existingArtifacts.contains(name.toUpperCase())) {
-            try {
-                ExecuteStatementResult result = client.executeStatement("DROP " + artifact + " IF EXISTS " + name + ";")
-                        .get();
-                log.info("Result drop {} {} {}", artifact, name, result.queryId());
-            } catch (Exception e) {
-                client.close();
-                log.error("Error dropping {}[{}]", artifact, name, e);
-                throw new RuntimeException(e);
-            }
-        } else {
-            log.info("{} {} does not exist yet, it won't be dropped ...", artifact, name);
         }
     }
 
@@ -190,10 +170,10 @@ public class QueryStream {
     }
 
     public static void main(String[] args) throws ExecutionException, InterruptedException, IOException {
-        Client client = Client.create(getClientOptions());
+        Client client = Client.create(getKSqlDbClientOptions());
 
         try {
-            ClusterUtils.deleteTopics(List.of(MEMBER_EMAIL_LIST_STREAM, MEMBER_SIGNUPS_EMAIL_STREAM));
+            ClusterUtils.deleteTopics(List.of(MEMBER_EMAIL_LIST_STREAM, MEMBER_SIGNUPS_EMAIL_STREAM_QUERYABLE));
             dropTables(client);
             dropStreams(client);
             createStreams(client);
@@ -204,11 +184,20 @@ public class QueryStream {
 
             if (args[0].equals("--with-ksql-stream-query")) {
                 // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
-                String sql = "SELECT * FROM " + MEMBER_SIGNUPS_EMAIL_STREAM + ";";
-                executeQuerySync(client, "SELECT * FROM " + MEMBER_SIGNUPS_EMAIL_STREAM + ";");
+                executeQuerySync(client, "SELECT * FROM " + MEMBER_SIGNUPS_EMAIL_STREAM_QUERYABLE + ";");
                 executeQuerySync(client, "SELECT * FROM " + MEMBER_SIGNUPS_TABLE_QUERYABLE + ";");
                 client.close();
-            } else if (args[0].equals("§")) {
+
+                // Test consuming from the topics that back a stream and a table
+                log.info("*************************** CONSUMING FROM STREAM ***************************");
+                int records1 = SimpleConsumer.consume(MEMBER_SIGNUPS_EMAIL_STREAM_QUERYABLE.toUpperCase());
+                Validate.isTrue(records1 == 3, "Expected value 3");
+                log.info("*************************** CONSUMING FROM TABLE ***************************");
+                // NOTE: Every query multiplies the results (multiples of 5), it does not seem reliable to do this.
+                int records2 = SimpleConsumer.consume(MEMBER_SIGNUPS_TABLE_QUERYABLE.toUpperCase());
+                Validate.isTrue(records2 % 5 == 0, "Expected value to be a multiple of 5");
+
+            } else if (args[0].equals("--with-ksql-join-stream-query")) {
                 // Run SimpleProducer.main with argument --for-ksql-demo to generate data for this demo
                 executeQueryAsync(client, "SELECT * FROM " + MEMBER_EMAIL_LIST_STREAM + ";");
                 //executeQueryAsync(client, "SELECT * FROM " + MEMBER_EMAIL_LIST_TABLE + ";");
@@ -216,6 +205,7 @@ public class QueryStream {
             }
         } catch (Exception e) {
             client.close();
+            throw e;
         }
     }
 }

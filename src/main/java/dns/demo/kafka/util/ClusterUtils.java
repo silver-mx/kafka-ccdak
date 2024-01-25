@@ -1,5 +1,6 @@
 package dns.demo.kafka.util;
 
+import io.confluent.ksql.api.client.ClientOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.ListTopicsOptions;
@@ -10,10 +11,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
@@ -79,6 +77,12 @@ public class ClusterUtils {
         return props;
     }
 
+    public static ClientOptions getKSqlDbClientOptions() {
+        return ClientOptions.create()
+                .setHost(KSQLDB_SERVER_HOST)
+                .setPort(KSQLDB_SERVER_HOST_PORT);
+    }
+
     public static AdminClient getAdminClient() {
         return AdminClient.create(getAdminClientProperties());
     }
@@ -93,7 +97,7 @@ public class ClusterUtils {
         }
     }
 
-    public static void deleteTopics(List<String> topics) {
+    public static void deleteTopics(Collection<String> topics) {
         Set<String> existingTopics = getExistingTopics(topics);
         if (!existingTopics.isEmpty()) {
             try {
@@ -105,7 +109,7 @@ public class ClusterUtils {
         }
     }
 
-    public static Set<String> getExistingTopics(List<String> topics) {
+    public static Set<String> getExistingTopics(Collection<String> topics) {
         try {
             Set<String> topicsInCluster = getAdminClient().listTopics(
                             new ListTopicsOptions().listInternal(false))
