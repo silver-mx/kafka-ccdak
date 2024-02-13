@@ -25,6 +25,7 @@
         <!--See example at https://github.com/confluentinc/examples/blob/7.5.0-post/clients/avro/pom.xml-->
         <io.confluent.schema-registry.version>7.5.0</io.confluent.schema-registry.version>
         <ksqldb.version>0.29.0</ksqldb.version>
+        <javafaker.version>1.0.2</javafaker.version>
     </properties>
 
     <repositories>
@@ -127,6 +128,12 @@
             <artifactId>ksqldb-api-client</artifactId>
             <version>${ksqldb.version}</version>
             <classifier>with-dependencies</classifier>
+        </dependency>
+        <!-- To generate fake data -->
+        <dependency>
+            <groupId>com.github.javafaker</groupId>
+            <artifactId>javafaker</artifactId>
+            <version>${javafaker.version}</version>
         </dependency>
 
         <!-- DEV DEPENDENCIES -->

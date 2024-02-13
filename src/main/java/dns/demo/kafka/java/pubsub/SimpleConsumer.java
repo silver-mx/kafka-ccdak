@@ -7,6 +7,7 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -80,6 +81,7 @@ public class SimpleConsumer {
 
     public static Map<String, Object> getConsumerProperties(String broker) {
         return Map.of(
+                CLIENT_ID_CONFIG, "spring-boot-consumer",
                 BOOTSTRAP_SERVERS_CONFIG, broker,
                 GROUP_ID_CONFIG, "simple-java-consumer-group" + UUID.randomUUID(),
                 ENABLE_AUTO_COMMIT_CONFIG, true,

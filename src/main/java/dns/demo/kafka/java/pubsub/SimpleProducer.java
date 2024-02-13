@@ -94,6 +94,7 @@ public class SimpleProducer {
 
     public static Map<String, Object> getProducerProperties(String broker) {
         return Map.of(
+                CLIENT_ID_CONFIG, "spring-boot-producer",
                 BOOTSTRAP_SERVERS_CONFIG, broker,
                 KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
                 VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName(),
