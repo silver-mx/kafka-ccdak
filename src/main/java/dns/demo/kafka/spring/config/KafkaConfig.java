@@ -21,7 +21,6 @@ import java.util.Map;
 
 import static org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG;
 
-@EnableKafka
 @Configuration
 public class KafkaConfig {
 
