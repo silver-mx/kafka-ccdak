@@ -5,6 +5,7 @@ import dns.demo.kafka.java.pubsub.SimpleConsumer;
 import dns.demo.kafka.java.pubsub.SimpleProducer;
 import dns.demo.kafka.util.ClusterUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.kafka.clients.CommonClientConfigs.SECURITY_PROTOCOL_CONFIG;
 import static org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG;
 
 @EnableKafka
@@ -30,6 +32,15 @@ public class KafkaConfig {
     public static final String SPRING_KAFKA_TOPIC_PLAIN = "spring-kafka-topic-plain";
     public static final String SPRING_KAFKA_TOPIC_WORD_COUNT_OUTPUT = "streams-wordcount-output";
     public static final String SPRING_KAFKA_TOPIC_AVRO = "spring-kafka-topic-avro";
+
+    private final String bootstrapServers;
+    private final String securityProtocol;
+
+    public KafkaConfig(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
+                       @Value("${spring.kafka.security.protocol}") String securityProtocol) {
+        this.bootstrapServers = bootstrapServers;
+        this.securityProtocol = securityProtocol;
+    }
 
     @Bean
     public KafkaAdmin.NewTopics topics() {
@@ -53,7 +64,9 @@ public class KafkaConfig {
     @Qualifier("avro-producer-config")
     public Map<String, Object> avroProducerConfig() {
         try {
-            return SimpleProducer.getProducerPropertiesWithTlsAndAvroSerializer(ClusterUtils.getBrokerTls(), ClusterUtils.getSchemaRegistryUrl());
+            Map<String, Object> config = new HashMap<>(SimpleProducer.getProducerPropertiesWithTlsAndAvroSerializer(bootstrapServers, ClusterUtils.getSchemaRegistryUrl()));
+            config.put(SECURITY_PROTOCOL_CONFIG, securityProtocol);
+            return config;
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -63,7 +76,9 @@ public class KafkaConfig {
     @Qualifier("plain-producer-config")
     public Map<String, Object> plainProducerConfig() {
         try {
-            return SimpleProducer.getProducerPropertiesWithTls(ClusterUtils.getBrokerTls());
+            Map<String, Object> config = new HashMap<>(SimpleProducer.getProducerPropertiesWithTls(bootstrapServers));
+            config.put(SECURITY_PROTOCOL_CONFIG, securityProtocol);
+            return config;
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -73,9 +88,10 @@ public class KafkaConfig {
     @Qualifier("plain-consumer-config")
     public Map<String, Object> plainConsumerConfig() {
         try {
-            Map<String, Object> props = new HashMap<>(SimpleConsumer.getConsumerPropertiesWithTls(ClusterUtils.getBrokerTls()));
-            props.put(ENABLE_AUTO_COMMIT_CONFIG, false);
-            return props;
+            Map<String, Object> config = new HashMap<>(SimpleConsumer.getConsumerPropertiesWithTls(bootstrapServers));
+            config.put(SECURITY_PROTOCOL_CONFIG, securityProtocol);
+            config.put(ENABLE_AUTO_COMMIT_CONFIG, false);
+            return config;
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
