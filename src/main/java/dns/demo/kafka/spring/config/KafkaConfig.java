@@ -1,5 +1,6 @@
 package dns.demo.kafka.spring.config;
 
+import dns.demo.kafka.domain.Hobbit;
 import dns.demo.kafka.domain.Purchase;
 import dns.demo.kafka.java.pubsub.SimpleConsumer;
 import dns.demo.kafka.java.pubsub.SimpleProducer;
@@ -35,11 +36,14 @@ public class KafkaConfig {
 
     private final String bootstrapServers;
     private final String securityProtocol;
+    private final String schemaRegistry;
 
     public KafkaConfig(@Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
-                       @Value("${spring.kafka.security.protocol}") String securityProtocol) {
+                       @Value("${spring.kafka.security.protocol}") String securityProtocol,
+                       @Value("${spring.kafka.properties.schema.registry.url}") String schemaRegistry) {
         this.bootstrapServers = bootstrapServers;
         this.securityProtocol = securityProtocol;
+        this.schemaRegistry = schemaRegistry;
     }
 
     @Bean
@@ -64,7 +68,7 @@ public class KafkaConfig {
     @Qualifier("avro-producer-config")
     public Map<String, Object> avroProducerConfig() {
         try {
-            Map<String, Object> config = new HashMap<>(SimpleProducer.getProducerPropertiesWithTlsAndAvroSerializer(bootstrapServers, ClusterUtils.getSchemaRegistryUrl()));
+            Map<String, Object> config = new HashMap<>(SimpleProducer.getProducerPropertiesWithTlsAndAvroSerializer(bootstrapServers, schemaRegistry));
             config.put(SECURITY_PROTOCOL_CONFIG, securityProtocol);
             return config;
         } catch (IOException e) {
@@ -98,7 +102,7 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ProducerFactory<String, Purchase> purchaseProducerFactory() {
+    public ProducerFactory<String, Hobbit> hobbitProducerFactory() {
         return new DefaultKafkaProducerFactory<>(avroProducerConfig());
     }
 
@@ -126,7 +130,7 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, Purchase> purchaseKafkaTemplate(ProducerFactory<String, Purchase> producerFactory) {
+    public KafkaTemplate<String, Hobbit> hobbitKafkaTemplate(ProducerFactory<String, Hobbit> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
 
