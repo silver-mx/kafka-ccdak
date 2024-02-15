@@ -5,6 +5,7 @@ import dns.demo.kafka.domain.Purchase;
 import dns.demo.kafka.spring.config.KafkaConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -23,11 +24,14 @@ public class Producer {
     private final KafkaTemplate<String, Purchase> purchaseKafkaTemplate;
     private final KafkaTemplate<String, String> stringKafkaTemplate;
     private Faker faker;
+    private final int numRecords;
 
     public Producer(final KafkaTemplate<String, Purchase> purchaseKafkaTemplate,
-                    final KafkaTemplate<String, String> stringKafkaTemplate) {
+                    final KafkaTemplate<String, String> stringKafkaTemplate,
+                    @Value("${application.producer.num-records:1000}") int numRecords) {
         this.purchaseKafkaTemplate = purchaseKafkaTemplate;
         this.stringKafkaTemplate = stringKafkaTemplate;
+        this.numRecords = numRecords;
     }
 
     @EventListener(ApplicationStartedEvent.class)
@@ -37,6 +41,7 @@ public class Producer {
         Flux<String> quotes = fromStream(Stream.generate(() -> faker.hobbit().quote()));
 
         Flux.zip(interval, quotes)
+                .take(numRecords)
                 .map(tuple -> {
                     ProducerRecord<String, String> record = new ProducerRecord<>(KafkaConfig.SPRING_KAFKA_TOPIC_PLAIN, String.valueOf(faker.random().nextInt(42)),
                             tuple.getT2());
