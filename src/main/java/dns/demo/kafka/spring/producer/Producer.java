@@ -1,4 +1,4 @@
-package dns.demo.kafka.spring.config.producer;
+package dns.demo.kafka.spring.producer;
 
 import com.github.javafaker.Faker;
 import dns.demo.kafka.domain.Purchase;

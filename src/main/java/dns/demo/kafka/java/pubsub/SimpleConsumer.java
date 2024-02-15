@@ -81,7 +81,7 @@ public class SimpleConsumer {
 
     public static Map<String, Object> getConsumerProperties(String broker) {
         return Map.of(
-                CLIENT_ID_CONFIG, "spring-boot-consumer",
+                //CLIENT_ID_CONFIG, "spring-boot-consumer",
                 BOOTSTRAP_SERVERS_CONFIG, broker,
                 GROUP_ID_CONFIG, "simple-java-consumer-group" + UUID.randomUUID(),
                 ENABLE_AUTO_COMMIT_CONFIG, true,

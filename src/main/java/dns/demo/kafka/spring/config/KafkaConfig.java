@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.kafka.annotation.EnableKafkaStreams;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.KafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
@@ -21,10 +22,13 @@ import java.util.Map;
 
 import static org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG;
 
+@EnableKafka
+@EnableKafkaStreams
 @Configuration
 public class KafkaConfig {
 
     public static final String SPRING_KAFKA_TOPIC_PLAIN = "spring-kafka-topic-plain";
+    public static final String SPRING_KAFKA_TOPIC_WORD_COUNT_OUTPUT = "streams-wordcount-output";
     public static final String SPRING_KAFKA_TOPIC_AVRO = "spring-kafka-topic-avro";
 
     @Bean
@@ -37,7 +41,12 @@ public class KafkaConfig {
                 TopicBuilder.name(SPRING_KAFKA_TOPIC_AVRO)
                         .replicas(1)
                         .partitions(3)
-                        .build());
+                        .build(),
+                TopicBuilder.name(SPRING_KAFKA_TOPIC_WORD_COUNT_OUTPUT)
+                        .replicas(1)
+                        .partitions(3)
+                        .build()
+        );
     }
 
     @Bean
@@ -109,4 +118,22 @@ public class KafkaConfig {
     public KafkaTemplate<String, String> stringKafkaTemplate(ProducerFactory<String, String> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
+
+    /*@Bean(name = DEFAULT_STREAMS_CONFIG_BEAN_NAME)
+    public KafkaStreamsConfiguration kStreamsConfigs() {
+        Map<String, Object> props = new HashMap<>(StreamUtils.getStreamPropertiesMap());
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "spring-boot-streams");
+        props.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG, WallclockTimestampExtractor.class.getName());
+        props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 1);
+        props.remove(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG);
+        props.remove(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG);
+
+        return new KafkaStreamsConfiguration(props);
+    }*/
+
+    /* NOTE: The default stream builder provided by spring starts the streams automatically */
+    /*@Bean
+    public FactoryBean<StreamsBuilder> kStreamBuilder(@Qualifier(DEFAULT_STREAMS_CONFIG_BEAN_NAME) KafkaStreamsConfiguration streamsConfig) {
+        return new StreamsBuilderFactoryBean(streamsConfig);
+    }*/
 }

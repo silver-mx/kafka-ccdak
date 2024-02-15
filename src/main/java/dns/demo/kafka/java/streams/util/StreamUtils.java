@@ -7,11 +7,15 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.processor.WallclockTimestampExtractor;
 
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toUnmodifiableMap;
 import static org.apache.kafka.streams.StreamsConfig.WINDOW_SIZE_MS_CONFIG;
 
 @Slf4j
@@ -29,6 +33,11 @@ public class StreamUtils {
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.StringSerde.class.getName());
 
         return props;
+    }
+
+    public static Map<String, Object> getStreamPropertiesMap() {
+        return getStreamProperties().entrySet().stream()
+                .collect(Collectors.toUnmodifiableMap(x -> (String) x.getKey(), Map.Entry::getValue));
     }
 
     public static KafkaStreams executeKafkaStreams(Properties props, Consumer<StreamsBuilder> streamsBuilderConsumer) {
